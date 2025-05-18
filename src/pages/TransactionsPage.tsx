@@ -5,17 +5,11 @@ import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
+  CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -23,6 +17,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -30,23 +26,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { formatNaira, formatDate, generateId } from '@/lib/formatter';
-import { Transaction } from '@/types';
+import { useToast } from '@/hooks/use-toast';
+import { formatNaira, generateId, formatDate } from '@/lib/formatter';
 import { getStoredItems, addItem, STORAGE_KEYS } from '@/lib/offlineStorage';
-import { Plus, ArrowUp, ArrowDown } from 'lucide-react';
+import { Transaction } from '@/types';
+import { Plus, ArrowUpRight, ArrowDownRight, CreditCard } from 'lucide-react';
 
 const TransactionsPage = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [filter, setFilter] = useState<string>('all');
   const [open, setOpen] = useState(false);
   const [newTransaction, setNewTransaction] = useState<Partial<Transaction>>({
+    type: 'sale',
     amount: 0,
     description: '',
-    type: 'sale',
-    date: new Date().toISOString().split('T')[0],
+    date: new Date().toISOString().substring(0, 10),
   });
+  const { toast } = useToast();
 
   useEffect(() => {
     // Load transactions from offline storage
@@ -55,17 +50,24 @@ const TransactionsPage = () => {
   }, []);
 
   const handleAddTransaction = () => {
-    if (!newTransaction.description || !newTransaction.amount || !newTransaction.date) {
-      alert('Please fill in all required fields');
+    if (!newTransaction.amount || !newTransaction.description || !newTransaction.date || !newTransaction.type) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
       return;
     }
+
+    // TypeScript type assertion for transaction.type
+    const transactionType = newTransaction.type as 'sale' | 'purchase' | 'expense';
 
     const transaction: Transaction = {
       id: generateId(),
       amount: Number(newTransaction.amount),
       description: newTransaction.description,
       date: newTransaction.date,
-      type: newTransaction.type as 'sale' | 'purchase' | 'expense',
+      type: transactionType,
       category: newTransaction.category,
       reference: newTransaction.reference,
       synced: false,
@@ -77,32 +79,46 @@ const TransactionsPage = () => {
     // Update state
     setTransactions([...transactions, transaction]);
 
-    // Reset form and close dialog
+    // Notify user
+    toast({
+      title: "Transaction Added",
+      description: "Your transaction has been recorded successfully",
+    });
+
+    // Reset form
     setNewTransaction({
+      type: 'sale',
       amount: 0,
       description: '',
-      type: 'sale',
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toISOString().substring(0, 10),
     });
     setOpen(false);
   };
 
-  const filteredTransactions = transactions.filter(transaction => {
-    if (filter === 'all') return true;
-    return transaction.type === filter;
-  });
+  const getTransactionIcon = (type: string) => {
+    switch (type) {
+      case 'sale':
+        return <ArrowUpRight className="text-green-500" />;
+      case 'purchase':
+        return <ArrowDownRight className="text-amber-500" />;
+      case 'expense':
+        return <CreditCard className="text-red-500" />;
+      default:
+        return null;
+    }
+  };
 
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
-        <div className="flex items-center justify-between">
+        <div className="flex justify-between items-center flex-wrap gap-4">
           <div>
             <h1 className="text-2xl font-bold">Transactions</h1>
-            <p className="text-muted-foreground">Manage your business transactions</p>
+            <p className="text-muted-foreground">Record and view your business transactions</p>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-primary text-white hover:bg-primary/90">
+              <Button>
                 <Plus className="mr-2 h-4 w-4" /> Add Transaction
               </Button>
             </DialogTrigger>
@@ -112,10 +128,15 @@ const TransactionsPage = () => {
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="type">Type</Label>
-                  <Select
-                    value={newTransaction.type}
-                    onValueChange={(value) => setNewTransaction({ ...newTransaction, type: value })}
+                  <Label htmlFor="type">Transaction Type</Label>
+                  <Select 
+                    value={newTransaction.type as string || 'sale'} 
+                    onValueChange={(value: string) => {
+                      // Ensuring type safety
+                      if (value === 'sale' || value === 'purchase' || value === 'expense') {
+                        setNewTransaction({ ...newTransaction, type: value });
+                      }
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Transaction Type" />
@@ -178,77 +199,63 @@ const TransactionsPage = () => {
           </Dialog>
         </div>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex justify-between items-center">
-              <CardTitle>Recent Transactions</CardTitle>
-              <Select value={filter} onValueChange={setFilter}>
-                <SelectTrigger className="w-36">
-                  <SelectValue placeholder="Filter" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="sale">Sales</SelectItem>
-                  <SelectItem value="purchase">Purchases</SelectItem>
-                  <SelectItem value="expense">Expenses</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {filteredTransactions.length > 0 ? (
-              <div className="overflow-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredTransactions.map((transaction) => (
-                      <TableRow key={transaction.id}>
-                        <TableCell>{formatDate(transaction.date)}</TableCell>
-                        <TableCell className="font-medium">
-                          {transaction.description}
-                          {transaction.category && (
-                            <span className="text-xs text-muted-foreground block">
-                              {transaction.category}
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center">
-                            {transaction.type === 'sale' ? (
-                              <ArrowUp className="h-4 w-4 mr-1 text-green-500" />
-                            ) : (
-                              <ArrowDown className="h-4 w-4 mr-1 text-red-500" />
-                            )}
-                            <span className="capitalize">{transaction.type}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className={`text-right ${
-                          transaction.type === 'sale' ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {formatNaira(transaction.amount)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : (
-              <div className="py-12 text-center">
-                <p className="text-muted-foreground mb-4">No transactions found. Add your first transaction.</p>
-                <Button variant="outline" onClick={() => setOpen(true)}>
-                  <Plus className="mr-2 h-4 w-4" /> Add Transaction
+        <div className="space-y-4">
+          {transactions.length > 0 ? (
+            transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((transaction) => (
+              <Card key={transaction.id} className="hover-lift glass-card overflow-hidden">
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-lg">{transaction.description}</CardTitle>
+                      <CardDescription>
+                        {formatDate(transaction.date)}
+                        {transaction.category && ` • ${transaction.category}`}
+                        {transaction.reference && ` • Ref: ${transaction.reference}`}
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {getTransactionIcon(transaction.type)}
+                      <span className={`font-semibold ${
+                        transaction.type === 'sale' 
+                          ? 'text-green-600' 
+                          : 'text-red-600'
+                      }`}>
+                        {formatNaira(transaction.amount)}
+                      </span>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardFooter className="pt-1 pb-2 border-t">
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <span className="capitalize">
+                      {transaction.type}
+                    </span>
+                    {!transaction.synced && (
+                      <span className="ml-auto bg-amber-500/10 text-amber-600 px-2 py-0.5 rounded-full">
+                        Not synced
+                      </span>
+                    )}
+                  </div>
+                </CardFooter>
+              </Card>
+            ))
+          ) : (
+            <Card className="text-center p-8 glass-card">
+              <CardContent className="space-y-4 pt-6">
+                <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                  <Plus className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <CardTitle className="text-xl">No Transactions Yet</CardTitle>
+                <CardDescription>
+                  Add your first transaction to get started with tracking your business finances
+                </CardDescription>
+                <Button className="mt-4" onClick={() => setOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" /> Add First Transaction
                 </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
     </AppLayout>
   );

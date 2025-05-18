@@ -1,4 +1,3 @@
-
 /**
  * Retrieves items from localStorage
  */
@@ -55,8 +54,10 @@ export function removeItem<T extends { id: string }>(key: string, itemId: string
 
 // Storage keys
 export const STORAGE_KEYS = {
-  TRANSACTIONS: 'aba_cash_ledger_transactions',
-  INVENTORY: 'aba_cash_ledger_inventory',
-  CUSTOMERS: 'aba_cash_ledger_customers',
-  INVOICES: 'aba_cash_ledger_invoices',
+  TRANSACTIONS: 'offline_transactions',
+  INVENTORY: 'offline_inventory',
+  CUSTOMERS: 'offline_customers',
+  INVOICES: 'offline_invoices',
+  CATEGORIES: 'offline_categories',
+  USER_PREFERENCES: 'user_preferences',
 };

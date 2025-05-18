@@ -11,12 +11,14 @@ interface AppLayoutProps {
 
 const AppLayout = ({ children, className }: AppLayoutProps) => {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-background to-muted/30">
       <Sidebar />
       <div className="flex-1 flex flex-col md:ml-64">
         <Header />
         <main className={cn("flex-1 p-4 sm:p-6", className)}>
-          {children}
+          <div className="container mx-auto max-w-7xl">
+            {children}
+          </div>
         </main>
       </div>
     </div>

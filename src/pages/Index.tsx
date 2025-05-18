@@ -11,8 +11,8 @@ const Index = () => {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-50 to-teal-50">
+      <div className="text-center animate-pulse">
         <p className="text-xl">Loading dashboard...</p>
       </div>
     </div>
