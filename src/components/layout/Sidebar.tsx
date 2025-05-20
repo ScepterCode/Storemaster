@@ -11,7 +11,7 @@ import {
   BarChartBig,
   Settings,
   XCircle,
-  BoxSeam,
+  Box,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -24,7 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, toggleSidebar }) => {
     { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={20} /> },
     { name: 'Transactions', href: '/transactions', icon: <Receipt size={20} /> },
     { name: 'Inventory', href: '/inventory', icon: <Package size={20} /> },
-    { name: 'Stock', href: '/stock', icon: <BoxSeam size={20} /> },
+    { name: 'Stock', href: '/stock', icon: <Box size={20} /> },
     { name: 'Reports', href: '/reports', icon: <BarChartBig size={20} /> },
     { name: 'Settings', href: '/settings', icon: <Settings size={20} /> },
   ];
