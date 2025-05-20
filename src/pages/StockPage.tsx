@@ -1,16 +1,23 @@
-
 import React, { useMemo } from 'react';
+import { Navigate } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useStock } from '@/hooks/useStock';
-import { Search, RefreshCw, Package } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Search, RefreshCw, Package, LogIn } from 'lucide-react';
 
 const StockPage: React.FC = () => {
   const { products, categories, loading, refreshStock, calculateCategoryTotal, calculateTotalInventoryValue } = useStock();
   const [searchQuery, setSearchQuery] = React.useState('');
+  const { user } = useAuth();
+  
+  // Redirect to login if not authenticated
+  if (!user) {
+    return <Navigate to="/" />;
+  }
 
   // Group products by category
   const productsByCategory = useMemo(() => {

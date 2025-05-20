@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/types';
 import { Category } from '@/lib/categoryUtils';
 import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const useStock = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -11,10 +12,17 @@ export const useStock = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
-    fetchProductsAndCategories();
-  }, []);
+    if (user) {
+      fetchProductsAndCategories();
+    } else {
+      // Clear data when no user is authenticated
+      setProducts([]);
+      setCategories([]);
+    }
+  }, [user]);
 
   const fetchProductsAndCategories = async () => {
     try {
