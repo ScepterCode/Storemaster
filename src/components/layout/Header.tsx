@@ -1,61 +1,44 @@
 
 import React from 'react';
+import { Menu, Bell, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Bell, Search } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { useAuth } from '@/contexts/AuthContext';
+import { useMobile } from '@/hooks/use-mobile';
 
-const Header = () => {
-  const isOnline = navigator.onLine;
+interface HeaderProps {
+  toggleSidebar: () => void;
+  isSidebarOpen: boolean;
+}
+
+const Header: React.FC<HeaderProps> = ({ toggleSidebar, isSidebarOpen }) => {
+  const { isMobile } = useMobile();
+  const { user, signOut } = useAuth();
+  
+  const userInitials = user?.email ? user.email.substring(0, 2).toUpperCase() : 'U';
 
   return (
-    <header className="sticky top-0 z-20 flex items-center justify-between h-16 px-4 sm:px-6 bg-background/80 backdrop-blur-sm border-b border-border">
-      {/* Left section */}
-      <div className="md:ml-0 flex items-center">
-        <div className="relative md:w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <input
-            type="search"
-            placeholder="Search..."
-            className="w-full h-9 pl-8 bg-background border border-input rounded-md focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          />
-        </div>
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4">
+      <div className="flex items-center">
+        <Button variant="ghost" size="icon" onClick={toggleSidebar} className="mr-2">
+          {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+        </Button>
+        {!isMobile && <h1 className="text-xl font-semibold">StoreMaster</h1>}
       </div>
-
-      {/* Right section */}
       <div className="flex items-center gap-4">
-        {/* Connection status indicator */}
-        {!isOnline && (
-          <div className="text-xs bg-destructive/20 text-destructive px-2 py-1 rounded-full flex items-center">
-            <span className="relative flex h-2 w-2 mr-1">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span>
-            </span>
-            Offline
-          </div>
-        )}
+        <ThemeToggle />
         
-        {/* Notifications */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-destructive" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <div className="p-4 text-center border-b">
-              <p className="text-sm font-medium">Notifications</p>
-            </div>
-            <div className="py-2 px-4">
-              <p className="text-xs text-muted-foreground">No new notifications</p>
-            </div>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button variant="ghost" size="icon" className="rounded-full">
+          <Bell size={20} />
+        </Button>
+        
+        <div className="flex items-center gap-2">
+          <Avatar className="h-9 w-9">
+            <AvatarFallback>{userInitials}</AvatarFallback>
+          </Avatar>
+          <Button variant="ghost" size="sm" onClick={() => signOut()}>Sign Out</Button>
+        </div>
       </div>
     </header>
   );
