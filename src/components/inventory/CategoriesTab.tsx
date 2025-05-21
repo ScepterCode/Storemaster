@@ -22,6 +22,8 @@ interface CategoriesTabProps {
   newCategory: Partial<Category>;
   setNewCategory: React.Dispatch<React.SetStateAction<Partial<Category>>>;
   handleAddCategory: () => void;
+  handleUpdateCategory: (category: Category) => void;
+  handleDeleteCategory: (categoryId: string, productsCount: number) => void;
 }
 
 const CategoriesTab = ({
@@ -32,6 +34,8 @@ const CategoriesTab = ({
   newCategory,
   setNewCategory,
   handleAddCategory,
+  handleUpdateCategory,
+  handleDeleteCategory,
 }: CategoriesTabProps) => {
   return (
     <Card className="border shadow-lg bg-white/90 backdrop-blur-sm">
@@ -52,6 +56,8 @@ const CategoriesTab = ({
           categories={categories} 
           products={products}
           setCategoryDialogOpen={setCategoryDialogOpen}
+          onUpdateCategory={handleUpdateCategory}
+          onDeleteCategory={handleDeleteCategory}
         />
       </CardContent>
 

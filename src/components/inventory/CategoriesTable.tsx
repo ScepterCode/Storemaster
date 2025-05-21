@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Table,
   TableBody,
@@ -9,17 +9,46 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Folder, PlusCircle } from 'lucide-react';
+import { Folder, PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { Category } from '@/lib/categoryUtils';
 import { Product } from '@/types';
+import EditCategoryDialog from './EditCategoryDialog';
+import DeleteConfirmationDialog from './DeleteConfirmationDialog';
 
 interface CategoriesTableProps {
   categories: Category[];
   products: Product[];
   setCategoryDialogOpen: (open: boolean) => void;
+  onUpdateCategory: (category: Category) => void;
+  onDeleteCategory: (categoryId: string, productsCount: number) => void;
 }
 
-const CategoriesTable = ({ categories, products, setCategoryDialogOpen }: CategoriesTableProps) => {
+const CategoriesTable = ({ 
+  categories, 
+  products, 
+  setCategoryDialogOpen,
+  onUpdateCategory,
+  onDeleteCategory 
+}: CategoriesTableProps) => {
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<{id: string, productsCount: number} | null>(null);
+
+  const handleEditClick = (category: Category) => {
+    setEditingCategory(category);
+  };
+
+  const handleDeleteClick = (categoryId: string, productsCount: number) => {
+    setCategoryToDelete({ id: categoryId, productsCount });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (categoryToDelete) {
+      onDeleteCategory(categoryToDelete.id, categoryToDelete.productsCount);
+    }
+  };
+
   if (categories.length === 0) {
     return (
       <div className="py-12 text-center">
@@ -39,6 +68,7 @@ const CategoriesTable = ({ categories, products, setCategoryDialogOpen }: Catego
             <TableHead>Name</TableHead>
             <TableHead>Description</TableHead>
             <TableHead>Products</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -58,11 +88,46 @@ const CategoriesTable = ({ categories, products, setCategoryDialogOpen }: Catego
                     {productCount} {productCount === 1 ? 'product' : 'products'}
                   </span>
                 </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => handleEditClick(category)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleDeleteClick(category.id, productCount)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </TableCell>
               </TableRow>
             );
           })}
         </TableBody>
       </Table>
+
+      {editingCategory && (
+        <EditCategoryDialog 
+          open={!!editingCategory}
+          setOpen={() => setEditingCategory(null)}
+          category={editingCategory}
+          onUpdate={onUpdateCategory}
+        />
+      )}
+
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        setOpen={setDeleteDialogOpen}
+        onDelete={handleConfirmDelete}
+        title="Delete Category"
+        description={
+          categoryToDelete?.productsCount ? 
+          `This category is being used by ${categoryToDelete.productsCount} product${categoryToDelete.productsCount === 1 ? '' : 's'}. Please reassign or delete these products first.` : 
+          "Are you sure you want to delete this category? This action cannot be undone."
+        }
+      />
     </div>
   );
 };

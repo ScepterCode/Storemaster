@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Table,
   TableBody,
@@ -9,24 +9,55 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
-import { Tag } from 'lucide-react';
+import { Tag, Edit, Trash2 } from 'lucide-react';
 import { formatNaira } from '@/lib/formatter';
 import { Product } from '@/types';
-import { getCategoryName } from '@/lib/categoryUtils';
+import { Category, getCategoryName } from '@/lib/categoryUtils';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
+import EditProductDialog from './EditProductDialog';
+import DeleteConfirmationDialog from './DeleteConfirmationDialog';
 
 interface ProductsTableProps {
   products: Product[];
+  categories: Category[];
   searchQuery: string;
   setProductDialogOpen: (open: boolean) => void;
+  onUpdateProduct: (product: Product) => void;
+  onDeleteProduct: (productId: string) => void;
 }
 
-const ProductsTable = ({ products, searchQuery, setProductDialogOpen }: ProductsTableProps) => {
+const ProductsTable = ({ 
+  products, 
+  categories,
+  searchQuery, 
+  setProductDialogOpen,
+  onUpdateProduct,
+  onDeleteProduct
+}: ProductsTableProps) => {
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<string | null>(null);
+
   const filteredProducts = products.filter(product => 
     product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     (product.category && product.category.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  const handleEditClick = (product: Product) => {
+    setEditingProduct(product);
+  };
+
+  const handleDeleteClick = (productId: string) => {
+    setProductToDelete(productId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (productToDelete) {
+      onDeleteProduct(productToDelete);
+    }
+  };
 
   if (filteredProducts.length === 0) {
     return (
@@ -48,7 +79,8 @@ const ProductsTable = ({ products, searchQuery, setProductDialogOpen }: Products
             <TableHead>Category</TableHead>
             <TableHead>Unit Price</TableHead>
             <TableHead>Quantity</TableHead>
-            <TableHead className="text-right">Stock Status</TableHead>
+            <TableHead>Stock Status</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -74,8 +106,8 @@ const ProductsTable = ({ products, searchQuery, setProductDialogOpen }: Products
               </TableCell>
               <TableCell>{formatNaira(product.unitPrice)}</TableCell>
               <TableCell>{product.quantity}</TableCell>
-              <TableCell className="text-right">
-                <div className="flex items-center justify-end">
+              <TableCell>
+                <div className="flex items-center">
                   <span className={`text-sm mr-2 ${
                     product.quantity === 0
                       ? 'text-red-600'
@@ -95,10 +127,38 @@ const ProductsTable = ({ products, searchQuery, setProductDialogOpen }: Products
                   />
                 </div>
               </TableCell>
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => handleEditClick(product)}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(product.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+
+      {editingProduct && (
+        <EditProductDialog 
+          open={!!editingProduct}
+          setOpen={() => setEditingProduct(null)}
+          product={editingProduct}
+          onUpdate={onUpdateProduct}
+          categories={categories}
+        />
+      )}
+
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        setOpen={setDeleteDialogOpen}
+        onDelete={handleConfirmDelete}
+        title="Delete Product"
+        description="Are you sure you want to delete this product? This action cannot be undone."
+      />
     </div>
   );
 };

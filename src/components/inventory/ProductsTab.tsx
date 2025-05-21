@@ -25,6 +25,8 @@ interface ProductsTabProps {
   newProduct: Partial<Product>;
   setNewProduct: React.Dispatch<React.SetStateAction<Partial<Product>>>;
   handleAddProduct: () => void;
+  handleUpdateProduct: (product: Product) => void;
+  handleDeleteProduct: (productId: string) => void;
 }
 
 const ProductsTab = ({
@@ -37,6 +39,8 @@ const ProductsTab = ({
   newProduct,
   setNewProduct,
   handleAddProduct,
+  handleUpdateProduct,
+  handleDeleteProduct,
 }: ProductsTabProps) => {
   return (
     <Card className="border shadow-lg bg-white/90 backdrop-blur-sm">
@@ -63,8 +67,11 @@ const ProductsTab = ({
       <CardContent>
         <ProductsTable 
           products={products} 
+          categories={categories}
           searchQuery={searchQuery}
           setProductDialogOpen={setProductDialogOpen}
+          onUpdateProduct={handleUpdateProduct}
+          onDeleteProduct={handleDeleteProduct}
         />
       </CardContent>
 

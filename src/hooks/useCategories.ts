@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { Category, getCategories, addCategory } from '@/lib/categoryUtils';
+import { Category, getCategories, addCategory, updateCategory, deleteCategory } from '@/lib/categoryUtils';
 import { generateId } from '@/lib/formatter';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -145,6 +144,132 @@ export const useCategories = () => {
     }
   };
 
+  const handleUpdateCategory = async (updatedCategory: Category) => {
+    if (!updatedCategory.name) {
+      toast({
+        title: "Error",
+        description: "Please enter a category name",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      const categoryToUpdate = {
+        ...updatedCategory,
+        synced: false,
+      };
+
+      // If user is authenticated, update in Supabase
+      if (user) {
+        try {
+          const { error } = await supabase
+            .from('categories')
+            .update({
+              name: categoryToUpdate.name,
+              description: categoryToUpdate.description,
+            })
+            .eq('id', categoryToUpdate.id);
+            
+          if (error) throw error;
+          categoryToUpdate.synced = true;
+          
+          toast({
+            title: "Success",
+            description: "Category updated successfully",
+            variant: "default",
+          });
+        } catch (err) {
+          console.error('Error updating category in Supabase:', err);
+          toast({
+            title: "Sync Error",
+            description: "Category updated locally but failed to sync",
+            variant: "destructive",
+          });
+        }
+      }
+
+      // Update in local storage
+      updateCategory(categoryToUpdate);
+
+      // Update state
+      setCategories(categories.map(c => c.id === categoryToUpdate.id ? categoryToUpdate : c));
+
+    } catch (err) {
+      console.error('Error updating category:', err);
+      setError(err instanceof Error ? err : new Error('Unknown error updating category'));
+      
+      toast({
+        title: "Error",
+        description: "Failed to update category. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId: string, productsUsingCategory: number) => {
+    // Prevent deletion if there are products using this category
+    if (productsUsingCategory > 0) {
+      toast({
+        title: "Cannot Delete Category",
+        description: `This category is being used by ${productsUsingCategory} product${productsUsingCategory === 1 ? '' : 's'}. Please reassign or delete these products first.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // If user is authenticated, delete from Supabase
+      if (user) {
+        try {
+          const { error } = await supabase
+            .from('categories')
+            .delete()
+            .eq('id', categoryId);
+            
+          if (error) throw error;
+          
+          toast({
+            title: "Success",
+            description: "Category deleted successfully",
+            variant: "default",
+          });
+        } catch (err) {
+          console.error('Error deleting category from Supabase:', err);
+          toast({
+            title: "Sync Error",
+            description: "Category deleted locally but failed to sync",
+            variant: "destructive",
+          });
+        }
+      }
+
+      // Delete from local storage
+      deleteCategory(categoryId);
+
+      // Update state
+      setCategories(categories.filter(category => category.id !== categoryId));
+
+    } catch (err) {
+      console.error('Error deleting category:', err);
+      setError(err instanceof Error ? err : new Error('Unknown error deleting category'));
+      
+      toast({
+        title: "Error",
+        description: "Failed to delete category. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const refreshCategories = () => {
     fetchCategories();
   };
@@ -157,6 +282,8 @@ export const useCategories = () => {
     newCategory,
     setNewCategory,
     handleAddCategory,
+    handleUpdateCategory,
+    handleDeleteCategory,
     loading,
     error,
     refreshCategories,

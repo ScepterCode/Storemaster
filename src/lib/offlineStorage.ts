@@ -34,23 +34,23 @@ export function addItem<T>(key: string, item: T): void {
 /**
  * Updates an item in localStorage
  */
-export function updateItem<T extends { id: string }>(key: string, item: T): void {
+export const updateItem = <T extends { id: string }>(key: string, item: T): void => {
   const items = getStoredItems<T>(key);
   const index = items.findIndex(i => i.id === item.id);
+  
   if (index !== -1) {
     items[index] = item;
-    storeItems(key, items);
+    localStorage.setItem(key, JSON.stringify(items));
   }
-}
+};
 
 /**
  * Removes an item from localStorage
  */
-export function removeItem<T extends { id: string }>(key: string, itemId: string): void {
-  const items = getStoredItems<T>(key);
-  const filteredItems = items.filter(item => item.id !== itemId);
-  storeItems(key, filteredItems);
-}
+export const deleteItem = <T extends { id: string }>(key: string, itemId: string): void => {
+  const items = getStoredItems<T>(key).filter(item => item.id !== itemId);
+  localStorage.setItem(key, JSON.stringify(items));
+};
 
 // Storage keys
 export const STORAGE_KEYS = {

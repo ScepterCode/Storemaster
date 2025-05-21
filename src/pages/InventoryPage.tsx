@@ -27,7 +27,11 @@ const InventoryPage = () => {
     newCategory,
     setNewCategory,
     handleAddProduct,
+    handleUpdateProduct,
+    handleDeleteProduct,
     handleAddCategory,
+    handleUpdateCategory,
+    handleDeleteCategory,
     loading,
     error,
     refreshInventory,
@@ -95,6 +99,8 @@ const InventoryPage = () => {
                   newProduct={newProduct}
                   setNewProduct={setNewProduct}
                   handleAddProduct={handleAddProduct}
+                  handleUpdateProduct={handleUpdateProduct}
+                  handleDeleteProduct={handleDeleteProduct}
                 />
               </TabsContent>
               
@@ -107,6 +113,8 @@ const InventoryPage = () => {
                   newCategory={newCategory}
                   setNewCategory={setNewCategory}
                   handleAddCategory={handleAddCategory}
+                  handleUpdateCategory={handleUpdateCategory}
+                  handleDeleteCategory={handleDeleteCategory}
                 />
               </TabsContent>
             </>

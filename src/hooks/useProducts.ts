@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { Product } from '@/types';
-import { getStoredItems, addItem, STORAGE_KEYS } from '@/lib/offlineStorage';
+import { getStoredItems, addItem, updateItem, deleteItem, STORAGE_KEYS } from '@/lib/offlineStorage';
 import { generateId } from '@/lib/formatter';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -156,6 +155,125 @@ export const useProducts = () => {
     }
   };
 
+  const handleUpdateProduct = async (updatedProduct: Product) => {
+    if (!updatedProduct.id) {
+      toast({
+        title: "Error",
+        description: "Cannot update product without an ID",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      const productToUpdate = {
+        ...updatedProduct,
+        synced: false,
+      };
+
+      // If user is authenticated, update in Supabase
+      if (user) {
+        try {
+          const { error } = await supabase
+            .from('products')
+            .update({
+              name: productToUpdate.name,
+              quantity: productToUpdate.quantity,
+              selling_price: productToUpdate.unitPrice,
+              category_id: productToUpdate.category,
+              description: productToUpdate.description,
+            })
+            .eq('id', productToUpdate.id);
+            
+          if (error) throw error;
+          productToUpdate.synced = true;
+          
+          toast({
+            title: "Success",
+            description: "Product updated successfully",
+            variant: "default",
+          });
+        } catch (err) {
+          console.error('Error updating product in Supabase:', err);
+          toast({
+            title: "Sync Error",
+            description: "Product updated locally but failed to sync",
+            variant: "destructive",
+          });
+        }
+      }
+
+      // Update in local storage
+      updateItem<Product>(STORAGE_KEYS.INVENTORY, productToUpdate);
+
+      // Update state
+      setProducts(products.map(p => p.id === productToUpdate.id ? productToUpdate : p));
+
+    } catch (err) {
+      console.error('Error updating product:', err);
+      setError(err instanceof Error ? err : new Error('Unknown error updating product'));
+      
+      toast({
+        title: "Error",
+        description: "Failed to update product. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteProduct = async (productId: string) => {
+    try {
+      setLoading(true);
+
+      // If user is authenticated, delete from Supabase
+      if (user) {
+        try {
+          const { error } = await supabase
+            .from('products')
+            .delete()
+            .eq('id', productId);
+            
+          if (error) throw error;
+          
+          toast({
+            title: "Success",
+            description: "Product deleted successfully",
+            variant: "default",
+          });
+        } catch (err) {
+          console.error('Error deleting product from Supabase:', err);
+          toast({
+            title: "Sync Error",
+            description: "Product deleted locally but failed to sync",
+            variant: "destructive",
+          });
+        }
+      }
+
+      // Delete from local storage
+      deleteItem<Product>(STORAGE_KEYS.INVENTORY, productId);
+
+      // Update state
+      setProducts(products.filter(product => product.id !== productId));
+
+    } catch (err) {
+      console.error('Error deleting product:', err);
+      setError(err instanceof Error ? err : new Error('Unknown error deleting product'));
+      
+      toast({
+        title: "Error",
+        description: "Failed to delete product. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const refreshProducts = () => {
     fetchProducts();
   };
@@ -168,6 +286,8 @@ export const useProducts = () => {
     newProduct,
     setNewProduct,
     handleAddProduct,
+    handleUpdateProduct,
+    handleDeleteProduct,
     loading,
     error,
     refreshProducts,
