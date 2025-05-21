@@ -14,7 +14,10 @@ export const useInventory = () => {
     setProductDialogOpen, 
     newProduct, 
     setNewProduct, 
-    handleAddProduct 
+    handleAddProduct,
+    loading: productsLoading,
+    error: productsError,
+    refreshProducts
   } = useProducts();
   
   const { 
@@ -24,10 +27,30 @@ export const useInventory = () => {
     setCategoryDialogOpen, 
     newCategory, 
     setNewCategory, 
-    handleAddCategory 
+    handleAddCategory,
+    loading: categoriesLoading,
+    error: categoriesError,
+    refreshCategories
   } = useCategories();
   
-  const { searchQuery, setSearchQuery } = useSearchQuery();
+  const { 
+    searchQuery, 
+    setSearchQuery,
+    isSearching,
+    handleSearch 
+  } = useSearchQuery();
+
+  // Combined loading state
+  const loading = productsLoading || categoriesLoading;
+  
+  // Combined error handling
+  const error = productsError || categoriesError;
+
+  // Refresh all data
+  const refreshInventory = () => {
+    refreshProducts();
+    refreshCategories();
+  };
 
   return {
     products,
@@ -40,11 +63,16 @@ export const useInventory = () => {
     setCategoryDialogOpen,
     searchQuery,
     setSearchQuery,
+    isSearching,
+    handleSearch,
     newProduct,
     setNewProduct,
     newCategory,
     setNewCategory,
     handleAddProduct,
     handleAddCategory,
+    loading,
+    error,
+    refreshInventory,
   };
 };

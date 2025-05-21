@@ -13,6 +13,8 @@ export const useCategories = () => {
     name: '',
     description: '',
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -24,6 +26,8 @@ export const useCategories = () => {
     // If user is authenticated, fetch data from Supabase
     if (user) {
       fetchCategories();
+    } else {
+      setLoading(false);
     }
   }, [user]);
   
@@ -31,6 +35,9 @@ export const useCategories = () => {
     if (!user) return;
     
     try {
+      setLoading(true);
+      setError(null);
+      
       // Fetch categories
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('categories')
@@ -50,11 +57,15 @@ export const useCategories = () => {
       }
     } catch (err) {
       console.error('Error fetching categories:', err);
+      setError(err instanceof Error ? err : new Error('Unknown error fetching categories'));
+      
       toast({
         title: "Error",
-        description: "Failed to load category data",
+        description: "Failed to load category data. Please try again later.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -68,49 +79,74 @@ export const useCategories = () => {
       return;
     }
 
-    const category: Category = {
-      id: generateId(),
-      name: newCategory.name,
-      description: newCategory.description,
-      synced: false,
-    };
+    try {
+      setLoading(true);
+      
+      const category: Category = {
+        id: generateId(),
+        name: newCategory.name,
+        description: newCategory.description,
+        synced: false,
+      };
 
-    // If user is authenticated, store in Supabase
-    if (user) {
-      try {
-        const { error } = await supabase
-          .from('categories')
-          .insert({
-            id: category.id,
-            name: category.name,
-            description: category.description,
-            user_id: user.id
-          });
+      // If user is authenticated, store in Supabase
+      if (user) {
+        try {
+          const { error } = await supabase
+            .from('categories')
+            .insert({
+              id: category.id,
+              name: category.name,
+              description: category.description,
+              user_id: user.id
+            });
+            
+          if (error) throw error;
+          category.synced = true;
           
-        if (error) throw error;
-        category.synced = true;
-      } catch (err) {
-        console.error('Error saving category to Supabase:', err);
-        toast({
-          title: "Sync Error",
-          description: "Category saved locally but failed to sync",
-          variant: "destructive",
-        });
+          toast({
+            title: "Success",
+            description: "Category added successfully",
+            variant: "default",
+          });
+        } catch (err) {
+          console.error('Error saving category to Supabase:', err);
+          toast({
+            title: "Sync Error",
+            description: "Category saved locally but failed to sync",
+            variant: "destructive",
+          });
+        }
       }
+
+      // Add to local storage
+      addCategory(category);
+
+      // Update state
+      setCategories([...categories, category]);
+
+      // Reset form and close dialog
+      setNewCategory({
+        name: '',
+        description: '',
+      });
+      setCategoryDialogOpen(false);
+    } catch (err) {
+      console.error('Error adding category:', err);
+      setError(err instanceof Error ? err : new Error('Unknown error adding category'));
+      
+      toast({
+        title: "Error",
+        description: "Failed to add category. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
+  };
 
-    // Add to local storage
-    addCategory(category);
-
-    // Update state
-    setCategories([...categories, category]);
-
-    // Reset form and close dialog
-    setNewCategory({
-      name: '',
-      description: '',
-    });
-    setCategoryDialogOpen(false);
+  const refreshCategories = () => {
+    fetchCategories();
   };
 
   return {
@@ -121,5 +157,8 @@ export const useCategories = () => {
     newCategory,
     setNewCategory,
     handleAddCategory,
+    loading,
+    error,
+    refreshCategories,
   };
 };

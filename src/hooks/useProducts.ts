@@ -15,6 +15,8 @@ export const useProducts = () => {
     quantity: 0,
     unitPrice: 0,
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -26,6 +28,8 @@ export const useProducts = () => {
     // If user is authenticated, fetch data from Supabase
     if (user) {
       fetchProducts();
+    } else {
+      setLoading(false);
     }
   }, [user]);
   
@@ -33,6 +37,9 @@ export const useProducts = () => {
     if (!user) return;
     
     try {
+      setLoading(true);
+      setError(null);
+      
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select('*')
@@ -54,11 +61,15 @@ export const useProducts = () => {
       }
     } catch (err) {
       console.error('Error fetching products:', err);
+      setError(err instanceof Error ? err : new Error('Unknown error fetching products'));
+      
       toast({
         title: "Error",
-        description: "Failed to load product data",
+        description: "Failed to load product data. Please try again later.",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -72,56 +83,81 @@ export const useProducts = () => {
       return;
     }
 
-    const product: Product = {
-      id: generateId(),
-      name: newProduct.name,
-      quantity: Number(newProduct.quantity) || 0,
-      unitPrice: Number(newProduct.unitPrice),
-      category: newProduct.category,
-      description: newProduct.description,
-      synced: false,
-    };
+    try {
+      setLoading(true);
+      
+      const product: Product = {
+        id: generateId(),
+        name: newProduct.name,
+        quantity: Number(newProduct.quantity) || 0,
+        unitPrice: Number(newProduct.unitPrice),
+        category: newProduct.category,
+        description: newProduct.description,
+        synced: false,
+      };
 
-    // If user is authenticated, store in Supabase
-    if (user) {
-      try {
-        const { error } = await supabase
-          .from('products')
-          .insert({
-            id: product.id,
-            name: product.name,
-            quantity: product.quantity,
-            selling_price: product.unitPrice,
-            category_id: product.category,
-            description: product.description,
-            user_id: user.id
-          });
+      // If user is authenticated, store in Supabase
+      if (user) {
+        try {
+          const { error } = await supabase
+            .from('products')
+            .insert({
+              id: product.id,
+              name: product.name,
+              quantity: product.quantity,
+              selling_price: product.unitPrice,
+              category_id: product.category,
+              description: product.description,
+              user_id: user.id
+            });
+            
+          if (error) throw error;
+          product.synced = true;
           
-        if (error) throw error;
-        product.synced = true;
-      } catch (err) {
-        console.error('Error saving product to Supabase:', err);
-        toast({
-          title: "Sync Error",
-          description: "Product saved locally but failed to sync",
-          variant: "destructive",
-        });
+          toast({
+            title: "Success",
+            description: "Product added successfully",
+            variant: "default",
+          });
+        } catch (err) {
+          console.error('Error saving product to Supabase:', err);
+          toast({
+            title: "Sync Error",
+            description: "Product saved locally but failed to sync",
+            variant: "destructive",
+          });
+        }
       }
+
+      // Also save to local storage as backup
+      addItem<Product>(STORAGE_KEYS.INVENTORY, product);
+
+      // Update state
+      setProducts([...products, product]);
+
+      // Reset form and close dialog
+      setNewProduct({
+        name: '',
+        quantity: 0,
+        unitPrice: 0,
+      });
+      setProductDialogOpen(false);
+    } catch (err) {
+      console.error('Error adding product:', err);
+      setError(err instanceof Error ? err : new Error('Unknown error adding product'));
+      
+      toast({
+        title: "Error",
+        description: "Failed to add product. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
+  };
 
-    // Also save to local storage as backup
-    addItem<Product>(STORAGE_KEYS.INVENTORY, product);
-
-    // Update state
-    setProducts([...products, product]);
-
-    // Reset form and close dialog
-    setNewProduct({
-      name: '',
-      quantity: 0,
-      unitPrice: 0,
-    });
-    setProductDialogOpen(false);
+  const refreshProducts = () => {
+    fetchProducts();
   };
 
   return {
@@ -132,5 +168,8 @@ export const useProducts = () => {
     newProduct,
     setNewProduct,
     handleAddProduct,
+    loading,
+    error,
+    refreshProducts,
   };
 };
