@@ -1,4 +1,5 @@
-import { STORAGE_KEYS, addItem, getStoredItems } from './offlineStorage';
+
+import { STORAGE_KEYS, addItem, getStoredItems, storeItems } from './offlineStorage';
 
 export interface Category {
   id: string;
@@ -31,11 +32,11 @@ export const updateCategory = (category: Category): void => {
   
   if (index !== -1) {
     categories[index] = category;
-    localStorage.setItem('categories', JSON.stringify(categories));
+    storeItems(STORAGE_KEYS.CATEGORIES, categories);
   }
 };
 
 export const deleteCategory = (categoryId: string): void => {
   const categories = getCategories().filter(category => category.id !== categoryId);
-  localStorage.setItem('categories', JSON.stringify(categories));
+  storeItems(STORAGE_KEYS.CATEGORIES, categories);
 };
