@@ -137,7 +137,7 @@ export const useInventory = () => {
         toast({
           title: "Sync Error",
           description: "Product saved locally but failed to sync",
-          variant: "warning",
+          variant: "destructive", // Changed from "warning" to "destructive"
         });
       }
     }
@@ -193,7 +193,7 @@ export const useInventory = () => {
         toast({
           title: "Sync Error",
           description: "Category saved locally but failed to sync",
-          variant: "warning",
+          variant: "destructive", // Changed from "warning" to "destructive"
         });
       }
     }
