@@ -2,29 +2,21 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
-import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/components/ui/use-toast';
+import { Filter, Database } from 'lucide-react';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/components/ui/use-toast';
-import { Tag, Database, PackageOpen, Filter, RefreshCw } from 'lucide-react';
-import { formatNaira } from '@/lib/formatter';
-import { Progress } from '@/components/ui/progress';
 import { useInventory } from '@/hooks/useInventory';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import DeleteConfirmationDialog from '@/components/inventory/DeleteConfirmationDialog';
 import EditProductDialog from '@/components/inventory/EditProductDialog';
+import CategorySidebar from '@/components/inventory/CategorySidebar';
+import InventoryProductTable from '@/components/inventory/InventoryProductTable';
+import InventoryHeader from '@/components/inventory/InventoryHeader';
 
 const InventoryViewPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -126,37 +118,20 @@ const InventoryViewPage = () => {
     return product.category === selectedCategory;
   });
 
-  const stockStatus = (quantity: number) => {
-    if (quantity === 0) return { text: 'Out of Stock', color: 'bg-red-600' };
-    if (quantity <= 5) return { text: 'Low Stock', color: 'bg-amber-600' };
-    return { text: 'In Stock', color: 'bg-green-600' };
+  const navigateToInventoryManage = () => {
+    window.location.href = '/inventory';
   };
 
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Inventory Overview</h1>
-            <p className="text-muted-foreground">View and manage your complete inventory</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button 
-              variant="outline" 
-              onClick={refreshInventory}
-              disabled={loading}
-            >
-              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => window.location.href = '/inventory'}
-            >
-              <PackageOpen className="mr-2 h-4 w-4" /> Manage Inventory
-            </Button>
-          </div>
-        </div>
+        <InventoryHeader 
+          title="Inventory Overview"
+          subtitle="View and manage your complete inventory"
+          onRefresh={refreshInventory}
+          loading={loading}
+          navigateToInventoryManage={navigateToInventoryManage}
+        />
 
         {error && (
           <div className="bg-destructive/15 border border-destructive text-destructive px-4 py-3 rounded-md">
@@ -166,32 +141,12 @@ const InventoryViewPage = () => {
 
         <div className="grid gap-4 md:grid-cols-[240px_1fr]">
           <div className="space-y-4">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Categories</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-1 p-3">
-                {loading ? (
-                  Array(5).fill(0).map((_, i) => (
-                    <div key={i} className="h-10 bg-muted animate-pulse rounded mb-1" />
-                  ))
-                ) : (
-                  formattedCategories.map(category => (
-                    <Button
-                      key={category.id}
-                      variant={selectedCategory === category.id ? "default" : "ghost"}
-                      className="w-full justify-start mb-1"
-                      onClick={() => handleSelectCategory(category.id)}
-                    >
-                      {category.name}
-                      <span className="ml-auto bg-muted px-2 py-0.5 rounded-full text-xs">
-                        {category.count}
-                      </span>
-                    </Button>
-                  ))
-                )}
-              </CardContent>
-            </Card>
+            <CategorySidebar 
+              categories={formattedCategories}
+              selectedCategory={selectedCategory}
+              onSelectCategory={handleSelectCategory}
+              loading={loading}
+            />
           </div>
 
           <div className="space-y-4">
@@ -211,89 +166,13 @@ const InventoryViewPage = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                {loading ? (
-                  <div className="space-y-2">
-                    {Array(5).fill(0).map((_, i) => (
-                      <div key={i} className="h-12 bg-muted animate-pulse rounded" />
-                    ))}
-                  </div>
-                ) : filteredProducts.length > 0 ? (
-                  <div className="overflow-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Product Name</TableHead>
-                          <TableHead>Category</TableHead>
-                          <TableHead>Unit Price</TableHead>
-                          <TableHead>Quantity</TableHead>
-                          <TableHead>Stock Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredProducts.map((product) => {
-                          const status = stockStatus(product.quantity);
-                          return (
-                            <TableRow key={product.id} className="hover:bg-muted/40 transition-colors">
-                              <TableCell className="font-medium">
-                                {product.name}
-                                {product.description && (
-                                  <span className="text-xs text-muted-foreground block">
-                                    {product.description}
-                                  </span>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {product.category ? (
-                                  <div className="flex items-center">
-                                    <Tag className="h-4 w-4 mr-1" />
-                                    {categories.find(c => c.id === product.category)?.name || "Unknown"}
-                                  </div>
-                                ) : (
-                                  "-"
-                                )}
-                              </TableCell>
-                              <TableCell>{formatNaira(product.unitPrice)}</TableCell>
-                              <TableCell>{product.quantity}</TableCell>
-                              <TableCell>
-                                <div className="flex items-center">
-                                  <span className={`text-sm mr-2 ${
-                                    product.quantity === 0
-                                      ? 'text-red-600'
-                                      : product.quantity <= 5
-                                      ? 'text-amber-600'
-                                      : 'text-green-600'
-                                  }`}>
-                                    {status.text}
-                                  </span>
-                                  <Progress 
-                                    value={Math.min(product.quantity * 10, 100)} 
-                                    className="h-2 w-20"
-                                  />
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex justify-end gap-2">
-                                  <Button variant="ghost" size="sm" onClick={() => handleEditClick(product)}>
-                                    <Tag className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(product.id)}>
-                                    <Filter className="h-4 w-4 text-destructive" />
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                ) : (
-                  <div className="py-12 text-center">
-                    <p className="text-muted-foreground mb-4">No products found.</p>
-                    <Database className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  </div>
-                )}
+                <InventoryProductTable 
+                  products={filteredProducts}
+                  categories={categories}
+                  onEdit={handleEditClick}
+                  onDelete={handleDeleteClick}
+                  loading={loading}
+                />
               </CardContent>
             </Card>
           </div>
