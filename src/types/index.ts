@@ -56,3 +56,10 @@ export interface DashboardStats {
   lowStockItems: number;
   pendingInvoices: number;
 }
+
+export interface Category {
+  id: string;
+  name: string;
+  description?: string;
+  synced: boolean;
+}

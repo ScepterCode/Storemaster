@@ -1,12 +1,6 @@
 
+import { Category } from '@/types';
 import { STORAGE_KEYS, addItem, getStoredItems, storeItems } from './offlineStorage';
-
-export interface Category {
-  id: string;
-  name: string;
-  description?: string;
-  synced: boolean;
-}
 
 export const getCategories = (): Category[] => {
   return getStoredItems<Category>(STORAGE_KEYS.CATEGORIES) || [];
