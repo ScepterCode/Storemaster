@@ -1,9 +1,19 @@
+
 import { useState, useEffect } from 'react';
-import { Category, getCategories, addCategory, updateCategory, deleteCategory } from '@/lib/categoryUtils';
+import { Category } from '@/types';
 import { generateId } from '@/lib/formatter';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
+import {
+  fetchCategoriesFromAPI,
+  addCategoryToAPI,
+  updateCategoryInAPI,
+  deleteCategoryFromAPI,
+  getCategoriesFromStorage,
+  addCategoryToStorage,
+  updateCategoryToStorage,
+  deleteCategoryFromStorage
+} from '@/services/categoryService';
 
 export const useCategories = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -19,7 +29,7 @@ export const useCategories = () => {
 
   useEffect(() => {
     // Load categories
-    const storedCategories = getCategories();
+    const storedCategories = getCategoriesFromStorage();
     setCategories(storedCategories);
     
     // If user is authenticated, fetch data from Supabase
@@ -37,23 +47,9 @@ export const useCategories = () => {
       setLoading(true);
       setError(null);
       
-      // Fetch categories
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name');
-        
-      if (categoriesError) throw categoriesError;
+      const fetchedCategories = await fetchCategoriesFromAPI(user.id);
+      setCategories(fetchedCategories);
       
-      if (categoriesData) {
-        const mappedCategories: Category[] = categoriesData.map(category => ({
-          id: category.id,
-          name: category.name,
-          description: category.description || undefined,
-          synced: true,
-        }));
-        setCategories(mappedCategories);
-      }
     } catch (err) {
       console.error('Error fetching categories:', err);
       setError(err instanceof Error ? err : new Error('Unknown error fetching categories'));
@@ -91,17 +87,8 @@ export const useCategories = () => {
       // If user is authenticated, store in Supabase
       if (user) {
         try {
-          const { error } = await supabase
-            .from('categories')
-            .insert({
-              id: category.id,
-              name: category.name,
-              description: category.description,
-              user_id: user.id
-            });
-            
-          if (error) throw error;
-          category.synced = true;
+          const syncedCategory = await addCategoryToAPI(category, user.id);
+          category.synced = syncedCategory.synced;
           
           toast({
             title: "Success",
@@ -119,7 +106,7 @@ export const useCategories = () => {
       }
 
       // Add to local storage
-      addCategory(category);
+      addCategoryToStorage(category);
 
       // Update state
       setCategories([...categories, category]);
@@ -165,16 +152,8 @@ export const useCategories = () => {
       // If user is authenticated, update in Supabase
       if (user) {
         try {
-          const { error } = await supabase
-            .from('categories')
-            .update({
-              name: categoryToUpdate.name,
-              description: categoryToUpdate.description,
-            })
-            .eq('id', categoryToUpdate.id);
-            
-          if (error) throw error;
-          categoryToUpdate.synced = true;
+          const syncedCategory = await updateCategoryInAPI(categoryToUpdate);
+          categoryToUpdate.synced = syncedCategory.synced;
           
           toast({
             title: "Success",
@@ -192,7 +171,7 @@ export const useCategories = () => {
       }
 
       // Update in local storage
-      updateCategory(categoryToUpdate);
+      updateCategoryToStorage(categoryToUpdate);
 
       // Update state
       setCategories(categories.map(c => c.id === categoryToUpdate.id ? categoryToUpdate : c));
@@ -228,12 +207,7 @@ export const useCategories = () => {
       // If user is authenticated, delete from Supabase
       if (user) {
         try {
-          const { error } = await supabase
-            .from('categories')
-            .delete()
-            .eq('id', categoryId);
-            
-          if (error) throw error;
+          await deleteCategoryFromAPI(categoryId);
           
           toast({
             title: "Success",
@@ -251,7 +225,7 @@ export const useCategories = () => {
       }
 
       // Delete from local storage
-      deleteCategory(categoryId);
+      deleteCategoryFromStorage(categoryId);
 
       // Update state
       setCategories(categories.filter(category => category.id !== categoryId));
