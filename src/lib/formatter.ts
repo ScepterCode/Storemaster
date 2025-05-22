@@ -1,31 +1,35 @@
 
+import { v4 as uuidv4 } from 'uuid';
+
 /**
- * Format a number as Nigerian Naira (NGN)
+ * Generates a unique ID
  */
-export const formatNaira = (amount: number): string => {
-  return new Intl.NumberFormat('en-NG', {
-    style: 'currency',
-    currency: 'NGN',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(amount);
+export const generateId = (): string => {
+  return uuidv4();
 };
 
 /**
- * Format a date string to a readable format
+ * Formats a number as currency (Naira)
+ */
+export const formatNaira = (amount: number): string => {
+  return `₦${amount.toFixed(2)}`;
+};
+
+/**
+ * Formats a date string (YYYY-MM-DD) to a more readable format
  */
 export const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
-  return new Intl.DateTimeFormat('en-NG', {
+  return date.toLocaleDateString('en-NG', {
     year: 'numeric',
     month: 'short',
-    day: 'numeric'
-  }).format(date);
+    day: 'numeric',
+  });
 };
 
 /**
- * Generate a unique ID for offline entries
+ * Formats a percentage
  */
-export const generateId = (): string => {
-  return 'offline-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+export const formatPercentage = (value: number): string => {
+  return `${(value * 100).toFixed(1)}%`;
 };

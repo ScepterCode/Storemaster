@@ -1,12 +1,14 @@
 
 import React, { useState } from 'react';
-import { useCustomers } from '@/hooks/useCustomers';
 import { Customer } from '@/types';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { UserPlus, ArrowLeft } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Check, ChevronsUpDown, Plus, User } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface CustomerSelectionProps {
   selectedCustomer: Customer | null;
@@ -21,10 +23,9 @@ const CustomerSelection: React.FC<CustomerSelectionProps> = ({
   onSelectCustomer,
   showNewCustomerForm,
   setShowNewCustomerForm,
-  onCreateCustomer
+  onCreateCustomer,
 }) => {
-  const { customers, loading } = useCustomers();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [open, setOpen] = useState(false);
   const [newCustomer, setNewCustomer] = useState<Partial<Customer>>({
     name: '',
     phone: '',
@@ -32,139 +33,118 @@ const CustomerSelection: React.FC<CustomerSelectionProps> = ({
     address: '',
   });
 
-  const filteredCustomers = searchTerm 
-    ? customers.filter(c => 
-        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (c.phone && c.phone.includes(searchTerm)) ||
-        (c.email && c.email.toLowerCase().includes(searchTerm.toLowerCase()))
-      )
-    : customers.slice(0, 5); // Show only top 5 if no search term
-
-  const handleCreateCustomer = () => {
+  const handleSubmitNewCustomer = () => {
     onCreateCustomer(newCustomer);
-    setNewCustomer({
-      name: '',
-      phone: '',
-      email: '',
-      address: '',
-    });
+    setNewCustomer({ name: '', phone: '', email: '', address: '' });
   };
-
-  if (selectedCustomer) {
-    return (
-      <div className="space-y-4">
-        <div className="p-4 border rounded-md">
-          <h3 className="font-medium mb-2">{selectedCustomer.name}</h3>
-          {selectedCustomer.phone && <p className="text-sm text-muted-foreground">{selectedCustomer.phone}</p>}
-          {selectedCustomer.email && <p className="text-sm text-muted-foreground">{selectedCustomer.email}</p>}
-          {selectedCustomer.address && <p className="text-sm text-muted-foreground">{selectedCustomer.address}</p>}
-        </div>
-        <Button variant="outline" onClick={() => onSelectCustomer({} as Customer)} className="w-full">
-          Change Customer
-        </Button>
-      </div>
-    );
-  }
 
   if (showNewCustomerForm) {
     return (
-      <div className="space-y-4">
-        <Button 
-          variant="link" 
-          onClick={() => setShowNewCustomerForm(false)} 
-          className="pl-0 flex items-center"
-        >
-          <ArrowLeft className="mr-1 h-4 w-4" /> Back to customer list
-        </Button>
-        
-        <div className="space-y-3">
-          <div>
-            <Label htmlFor="name">Name</Label>
-            <Input 
-              id="name" 
-              placeholder="Customer name" 
-              value={newCustomer.name || ''}
-              onChange={(e) => setNewCustomer({...newCustomer, name: e.target.value})}
-              required
+      <Card>
+        <CardContent className="space-y-4 pt-4">
+          <div className="space-y-2">
+            <Label htmlFor="customer-name">Name *</Label>
+            <Input
+              id="customer-name"
+              value={newCustomer.name}
+              onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+              placeholder="Customer name"
             />
           </div>
-          
-          <div>
-            <Label htmlFor="phone">Phone</Label>
-            <Input 
-              id="phone" 
-              placeholder="Phone number" 
+          <div className="space-y-2">
+            <Label htmlFor="customer-phone">Phone</Label>
+            <Input
+              id="customer-phone"
               value={newCustomer.phone || ''}
-              onChange={(e) => setNewCustomer({...newCustomer, phone: e.target.value})}
+              onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+              placeholder="Phone number"
             />
           </div>
-          
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Input 
-              id="email" 
-              placeholder="Email address" 
+          <div className="space-y-2">
+            <Label htmlFor="customer-email">Email</Label>
+            <Input
+              id="customer-email"
               type="email"
               value={newCustomer.email || ''}
-              onChange={(e) => setNewCustomer({...newCustomer, email: e.target.value})}
+              onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+              placeholder="Email address"
             />
           </div>
-          
-          <div>
-            <Label htmlFor="address">Address</Label>
-            <Input 
-              id="address" 
-              placeholder="Address" 
+          <div className="space-y-2">
+            <Label htmlFor="customer-address">Address</Label>
+            <Input
+              id="customer-address"
               value={newCustomer.address || ''}
-              onChange={(e) => setNewCustomer({...newCustomer, address: e.target.value})}
+              onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+              placeholder="Address"
             />
           </div>
-          
-          <Button 
-            className="w-full" 
-            onClick={handleCreateCustomer}
-            disabled={!newCustomer.name}
-          >
-            Save Customer
+        </CardContent>
+        <CardFooter className="flex justify-between">
+          <Button variant="ghost" onClick={() => setShowNewCustomerForm(false)}>Cancel</Button>
+          <Button onClick={handleSubmitNewCustomer} disabled={!newCustomer.name}>Save Customer</Button>
+        </CardFooter>
+      </Card>
+    );
+  }
+
+  if (selectedCustomer) {
+    return (
+      <Card>
+        <CardContent className="pt-4">
+          <div className="flex items-center">
+            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center mr-3">
+              <User className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-semibold">{selectedCustomer.name}</h3>
+              <p className="text-sm text-muted-foreground">
+                {selectedCustomer.phone || selectedCustomer.email || 'No contact information'}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Button variant="ghost" size="sm" onClick={() => onSelectCustomer(selectedCustomer)} className="w-full">
+            Change Customer
           </Button>
-        </div>
-      </div>
+        </CardFooter>
+      </Card>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div>
-        <Input 
-          placeholder="Search by name, phone, or email" 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between"
+          >
+            {selectedCustomer ? selectedCustomer.name : "Select customer..."}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[300px] p-0">
+          <Command>
+            <CommandInput placeholder="Search customers..." />
+            <CommandEmpty>No customer found.</CommandEmpty>
+            <CommandGroup>
+              {/* Command items will be rendered by the parent component */}
+            </CommandGroup>
+          </Command>
+        </PopoverContent>
+      </Popover>
       
-      <div className="space-y-2 max-h-72 overflow-y-auto">
-        {loading ? (
-          <div className="text-center py-4">Loading customers...</div>
-        ) : filteredCustomers.length > 0 ? (
-          filteredCustomers.map((customer) => (
-            <Card 
-              key={customer.id} 
-              className="cursor-pointer hover:bg-muted transition-colors"
-              onClick={() => onSelectCustomer(customer)}
-            >
-              <CardContent className="p-3">
-                <h3 className="font-medium">{customer.name}</h3>
-                {customer.phone && <p className="text-xs text-muted-foreground">{customer.phone}</p>}
-              </CardContent>
-            </Card>
-          ))
-        ) : (
-          <div className="text-center py-4">No customers found</div>
-        )}
-      </div>
-      
-      <Button onClick={() => setShowNewCustomerForm(true)} variant="outline" className="w-full">
-        <UserPlus className="mr-2 h-4 w-4" /> New Customer
+      <Button
+        variant="outline"
+        className="w-full"
+        onClick={() => setShowNewCustomerForm(true)}
+      >
+        <Plus className="mr-2 h-4 w-4" />
+        Add New Customer
       </Button>
     </div>
   );

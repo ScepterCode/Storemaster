@@ -7,30 +7,21 @@ export const getCategories = (): Category[] => {
 };
 
 export const addCategory = (category: Category): void => {
-  addItem<Category>(STORAGE_KEYS.CATEGORIES, category);
-};
-
-export const getCategoryById = (id: string): Category | undefined => {
   const categories = getCategories();
-  return categories.find(category => category.id === id);
+  categories.push(category);
+  storeItems(STORAGE_KEYS.CATEGORIES, categories);
 };
 
-export const getCategoryName = (id: string): string => {
-  const category = getCategoryById(id);
-  return category ? category.name : 'Uncategorized';
-};
-
-export const updateCategory = (category: Category): void => {
+export const updateCategory = (updatedCategory: Category): void => {
   const categories = getCategories();
-  const index = categories.findIndex(c => c.id === category.id);
-  
+  const index = categories.findIndex(c => c.id === updatedCategory.id);
   if (index !== -1) {
-    categories[index] = category;
+    categories[index] = updatedCategory;
     storeItems(STORAGE_KEYS.CATEGORIES, categories);
   }
 };
 
 export const deleteCategory = (categoryId: string): void => {
-  const categories = getCategories().filter(category => category.id !== categoryId);
+  const categories = getCategories().filter(c => c.id !== categoryId);
   storeItems(STORAGE_KEYS.CATEGORIES, categories);
 };
