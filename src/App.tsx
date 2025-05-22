@@ -15,6 +15,7 @@ import InventoryViewPage from "./pages/InventoryViewPage";
 import StockPage from "./pages/StockPage";
 import ReportsPage from "./pages/ReportsPage";
 import SettingsPage from "./pages/SettingsPage";
+import CashDeskPage from "./pages/CashDeskPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -55,6 +56,7 @@ const AppRoutes = () => {
       <Route path="/stock" element={<ProtectedRoute element={<StockPage />} />} />
       <Route path="/reports" element={<ProtectedRoute element={<ReportsPage />} />} />
       <Route path="/settings" element={<ProtectedRoute element={<SettingsPage />} />} />
+      <Route path="/cash-desk" element={<ProtectedRoute element={<CashDeskPage />} />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

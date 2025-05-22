@@ -1,4 +1,3 @@
-
 export interface Transaction {
   id: string;
   amount: number;
@@ -47,6 +46,17 @@ export interface InvoiceItem {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+}
+
+export interface CartItem extends InvoiceItem {
+  available: number;
+}
+
+export interface PaymentDetails {
+  method: 'cash' | 'card' | 'bank_transfer';
+  amount: number;
+  reference?: string;
+  change?: number;
 }
 
 export interface DashboardStats {
