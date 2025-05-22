@@ -1,10 +1,19 @@
+
 import { useState, useEffect } from 'react';
 import { Product } from '@/types';
-import { getStoredItems, addItem, updateItem, deleteItem, STORAGE_KEYS } from '@/lib/offlineStorage';
 import { generateId } from '@/lib/formatter';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
+import {
+  fetchProductsFromAPI,
+  addProductToAPI,
+  updateProductInAPI,
+  deleteProductFromAPI,
+  getProductsFromStorage,
+  addProductToStorage,
+  updateProductInStorage,
+  deleteProductFromStorage
+} from '@/services/productService';
 
 export const useProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -21,7 +30,7 @@ export const useProducts = () => {
 
   useEffect(() => {
     // Load products from offline storage
-    const storedProducts = getStoredItems<Product>(STORAGE_KEYS.INVENTORY);
+    const storedProducts = getProductsFromStorage();
     setProducts(storedProducts);
     
     // If user is authenticated, fetch data from Supabase
@@ -39,25 +48,9 @@ export const useProducts = () => {
       setLoading(true);
       setError(null);
       
-      const { data: productsData, error: productsError } = await supabase
-        .from('products')
-        .select('*')
-        .order('name');
-        
-      if (productsError) throw productsError;
+      const fetchedProducts = await fetchProductsFromAPI(user.id);
+      setProducts(fetchedProducts);
       
-      if (productsData) {
-        const mappedProducts: Product[] = productsData.map(product => ({
-          id: product.id,
-          name: product.name,
-          quantity: product.quantity,
-          unitPrice: product.selling_price,
-          category: product.category_id,
-          description: product.description || undefined,
-          synced: true,
-        }));
-        setProducts(mappedProducts);
-      }
     } catch (err) {
       console.error('Error fetching products:', err);
       setError(err instanceof Error ? err : new Error('Unknown error fetching products'));
@@ -98,20 +91,8 @@ export const useProducts = () => {
       // If user is authenticated, store in Supabase
       if (user) {
         try {
-          const { error } = await supabase
-            .from('products')
-            .insert({
-              id: product.id,
-              name: product.name,
-              quantity: product.quantity,
-              selling_price: product.unitPrice,
-              category_id: product.category,
-              description: product.description,
-              user_id: user.id
-            });
-            
-          if (error) throw error;
-          product.synced = true;
+          const syncedProduct = await addProductToAPI(product, user.id);
+          product.synced = syncedProduct.synced;
           
           toast({
             title: "Success",
@@ -129,7 +110,7 @@ export const useProducts = () => {
       }
 
       // Also save to local storage as backup
-      addItem<Product>(STORAGE_KEYS.INVENTORY, product);
+      addProductToStorage(product);
 
       // Update state
       setProducts([...products, product]);
@@ -176,19 +157,8 @@ export const useProducts = () => {
       // If user is authenticated, update in Supabase
       if (user) {
         try {
-          const { error } = await supabase
-            .from('products')
-            .update({
-              name: productToUpdate.name,
-              quantity: productToUpdate.quantity,
-              selling_price: productToUpdate.unitPrice,
-              category_id: productToUpdate.category,
-              description: productToUpdate.description,
-            })
-            .eq('id', productToUpdate.id);
-            
-          if (error) throw error;
-          productToUpdate.synced = true;
+          const syncedProduct = await updateProductInAPI(productToUpdate);
+          productToUpdate.synced = syncedProduct.synced;
           
           toast({
             title: "Success",
@@ -206,7 +176,7 @@ export const useProducts = () => {
       }
 
       // Update in local storage
-      updateItem<Product>(STORAGE_KEYS.INVENTORY, productToUpdate);
+      updateProductInStorage(productToUpdate);
 
       // Update state
       setProducts(products.map(p => p.id === productToUpdate.id ? productToUpdate : p));
@@ -232,12 +202,7 @@ export const useProducts = () => {
       // If user is authenticated, delete from Supabase
       if (user) {
         try {
-          const { error } = await supabase
-            .from('products')
-            .delete()
-            .eq('id', productId);
-            
-          if (error) throw error;
+          await deleteProductFromAPI(productId);
           
           toast({
             title: "Success",
@@ -255,7 +220,7 @@ export const useProducts = () => {
       }
 
       // Delete from local storage
-      deleteItem<Product>(STORAGE_KEYS.INVENTORY, productId);
+      deleteProductFromStorage(productId);
 
       // Update state
       setProducts(products.filter(product => product.id !== productId));
