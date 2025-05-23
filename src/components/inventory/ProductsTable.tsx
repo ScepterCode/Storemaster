@@ -11,8 +11,7 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Tag, Edit, Trash2 } from 'lucide-react';
 import { formatNaira } from '@/lib/formatter';
-import { Product } from '@/types';
-import { Category, getCategoryName } from '@/lib/categoryUtils';
+import { Product, Category } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import EditProductDialog from './EditProductDialog';
@@ -43,6 +42,11 @@ const ProductsTable = ({
     product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     (product.category && product.category.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  const getCategoryName = (categoryId: string) => {
+    const category = categories.find(c => c.id === categoryId);
+    return category ? category.name : "Unknown";
+  };
 
   const handleEditClick = (product: Product) => {
     setEditingProduct(product);
