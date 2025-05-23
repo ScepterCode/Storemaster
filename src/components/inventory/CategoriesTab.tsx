@@ -9,8 +9,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
-import { Product } from '@/types';
-import { Category } from '@/lib/categoryUtils';
+import { Product, Category } from '@/types';
 import CategoriesTable from './CategoriesTable';
 import CategoryDialog from './CategoryDialog';
 

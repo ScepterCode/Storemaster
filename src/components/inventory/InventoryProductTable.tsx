@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Table,
@@ -12,8 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { formatNaira } from '@/lib/formatter';
 import { Tag, Edit as EditIcon, Trash2 } from 'lucide-react';
-import { Product } from '@/types';
-import { Category } from '@/lib/categoryUtils';
+import { Product, Category } from '@/types';
 import { Database } from 'lucide-react';
 
 interface ProductTableProps {

@@ -1,8 +1,6 @@
-
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Product } from '@/types';
-import { Category } from '@/lib/categoryUtils';
+import { Product, Category } from '@/types';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 

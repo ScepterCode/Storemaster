@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Card,
@@ -10,8 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus } from 'lucide-react';
-import { Product } from '@/types';
-import { Category } from '@/lib/categoryUtils';
+import { Product, Category } from '@/types';
 import ProductsTable from './ProductsTable';
 import ProductDialog from './ProductDialog';
 

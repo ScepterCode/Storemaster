@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Table,
@@ -10,8 +9,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Folder, PlusCircle, Edit, Trash2 } from 'lucide-react';
-import { Category } from '@/lib/categoryUtils';
-import { Product } from '@/types';
+import { Category, Product } from '@/types';
 import EditCategoryDialog from './EditCategoryDialog';
 import DeleteConfirmationDialog from './DeleteConfirmationDialog';
 

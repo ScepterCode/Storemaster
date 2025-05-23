@@ -14,7 +14,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useSidebarContext } from '@/contexts/SidebarContext';
+import { useSidebar } from '@/contexts/SidebarContext';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface SidebarNavigationItem {
@@ -24,11 +24,14 @@ interface SidebarNavigationItem {
   active?: boolean;
 }
 
-const Sidebar = () => {
+interface SidebarProps {
+  isSidebarOpen: boolean;
+  toggleSidebar: () => void;
+}
+
+const Sidebar = ({ isSidebarOpen, toggleSidebar }: SidebarProps) => {
   const location = useLocation();
-  const { collapsed } = useSidebarContext();
   const { user, signOut } = useAuth();
-  const [open, setOpen] = useState(false);
 
   const isActive = (path: string) => {
     // Special case for dashboard/root path
@@ -82,13 +85,13 @@ const Sidebar = () => {
     <aside
       className={cn(
         'fixed inset-y-0 z-20 hidden h-full flex-col border-r bg-background transition-all sm:flex print:hidden',
-        collapsed ? 'w-[70px]' : 'w-[240px]'
+        isSidebarOpen ? 'w-[240px]' : 'w-[70px]'
       )}
     >
       <div className="flex h-14 items-center border-b px-3">
         <Link to="/" className="flex items-center">
           <CreditCardIcon className="h-6 w-6 text-primary" />
-          {!collapsed && (
+          {isSidebarOpen && (
             <span className="ml-2 font-semibold">Business Manager</span>
           )}
         </Link>
@@ -101,15 +104,15 @@ const Sidebar = () => {
               key={item.href}
               variant={item.active ? 'default' : 'ghost'}
               asChild
-              size={collapsed ? 'icon' : 'default'}
+              size={isSidebarOpen ? 'default' : 'icon'}
               className={cn(
                 'justify-start',
-                collapsed ? 'h-10 w-10' : 'h-10 w-full px-4'
+                isSidebarOpen ? 'h-10 w-full px-4' : 'h-10 w-10'
               )}
             >
               <Link to={item.href}>
                 {item.icon}
-                {!collapsed && <span className="ml-2">{item.label}</span>}
+                {isSidebarOpen && <span className="ml-2">{item.label}</span>}
               </Link>
             </Button>
           ))}
@@ -122,12 +125,12 @@ const Sidebar = () => {
             variant="ghost"
             className={cn(
               'h-10 justify-start',
-              collapsed ? 'h-10 w-10' : 'h-10 w-full px-4'
+              isSidebarOpen ? 'h-10 w-full px-4' : 'h-10 w-10'
             )}
             onClick={() => signOut()}
           >
             <SettingsIcon className="h-4 w-4" />
-            {!collapsed && <span className="ml-2">Logout</span>}
+            {isSidebarOpen && <span className="ml-2">Logout</span>}
           </Button>
         </div>
       )}
