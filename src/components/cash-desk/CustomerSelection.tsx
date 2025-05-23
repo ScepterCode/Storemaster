@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Check, ChevronsUpDown, Plus, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface CustomerSelectionProps {
+  customers: Customer[];
   selectedCustomer: Customer | null;
   onSelectCustomer: (customer: Customer) => void;
   showNewCustomerForm: boolean;
@@ -19,6 +20,7 @@ interface CustomerSelectionProps {
 }
 
 const CustomerSelection: React.FC<CustomerSelectionProps> = ({
+  customers,
   selectedCustomer,
   onSelectCustomer,
   showNewCustomerForm,
@@ -36,6 +38,11 @@ const CustomerSelection: React.FC<CustomerSelectionProps> = ({
   const handleSubmitNewCustomer = () => {
     onCreateCustomer(newCustomer);
     setNewCustomer({ name: '', phone: '', email: '', address: '' });
+  };
+
+  const handleSelectCustomer = (customer: Customer) => {
+    onSelectCustomer(customer);
+    setOpen(false);
   };
 
   if (showNewCustomerForm) {
@@ -105,7 +112,7 @@ const CustomerSelection: React.FC<CustomerSelectionProps> = ({
           </div>
         </CardContent>
         <CardFooter>
-          <Button variant="ghost" size="sm" onClick={() => onSelectCustomer(selectedCustomer)} className="w-full">
+          <Button variant="ghost" size="sm" onClick={() => onSelectCustomer(null)} className="w-full">
             Change Customer
           </Button>
         </CardFooter>
@@ -131,9 +138,30 @@ const CustomerSelection: React.FC<CustomerSelectionProps> = ({
           <Command>
             <CommandInput placeholder="Search customers..." />
             <CommandEmpty>No customer found.</CommandEmpty>
-            <CommandGroup>
-              {/* Command items will be rendered by the parent component */}
-            </CommandGroup>
+            <CommandList>
+              <CommandGroup>
+                {customers.map((customer) => (
+                  <CommandItem
+                    key={customer.id}
+                    value={customer.name}
+                    onSelect={() => handleSelectCustomer(customer)}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        selectedCustomer?.id === customer.id ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <div>
+                      <div className="font-medium">{customer.name}</div>
+                      {customer.phone && (
+                        <div className="text-sm text-muted-foreground">{customer.phone}</div>
+                      )}
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
           </Command>
         </PopoverContent>
       </Popover>

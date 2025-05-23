@@ -21,6 +21,7 @@ const CashDeskPage = () => {
   
   const {
     products,
+    customers,
     cart,
     cartTotal,
     searchTerm,
@@ -41,7 +42,16 @@ const CashDeskPage = () => {
     clearCart,
   } = useCashDesk();
 
+  console.log('Current state:', {
+    cart: cart.length,
+    selectedCustomer,
+    activeTab,
+    products: products.length,
+    customers: customers.length
+  });
+
   const handleCheckout = () => {
+    console.log('Attempting checkout with cart:', cart, 'customer:', selectedCustomer);
     if (createNewInvoice()) {
       setActiveTab('checkout');
     }
@@ -59,6 +69,8 @@ const CashDeskPage = () => {
     setReceiptMode(false);
     setActiveTab('sale');
   };
+
+  const canProceedToCheckout = cart.length > 0 && selectedCustomer !== null;
 
   return (
     <AppLayout>
@@ -83,10 +95,10 @@ const CashDeskPage = () => {
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="animate-fade-in">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="sale" disabled={cart.length > 0 && activeTab === 'checkout'}>
+              <TabsTrigger value="sale">
                 <ShoppingCart className="mr-2 h-4 w-4" /> Sale
               </TabsTrigger>
-              <TabsTrigger value="checkout" disabled={cart.length === 0 || !selectedCustomer}>
+              <TabsTrigger value="checkout" disabled={!canProceedToCheckout}>
                 <CreditCard className="mr-2 h-4 w-4" /> Checkout
               </TabsTrigger>
             </TabsList>
@@ -101,6 +113,7 @@ const CashDeskPage = () => {
                   </CardHeader>
                   <CardContent>
                     <CustomerSelection
+                      customers={customers}
                       selectedCustomer={selectedCustomer}
                       onSelectCustomer={handleCustomerSelect}
                       showNewCustomerForm={showNewCustomerForm}
@@ -134,7 +147,7 @@ const CashDeskPage = () => {
                   {/* Cart */}
                   <Card>
                     <CardHeader className="pb-2">
-                      <CardTitle>Shopping Cart</CardTitle>
+                      <CardTitle>Shopping Cart ({cart.length} items)</CardTitle>
                       <CardDescription>Items to be purchased</CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -148,7 +161,7 @@ const CashDeskPage = () => {
                       <div className="flex justify-end w-full">
                         <Button
                           onClick={handleCheckout}
-                          disabled={cart.length === 0 || !selectedCustomer}
+                          disabled={!canProceedToCheckout}
                         >
                           Proceed to Checkout
                         </Button>

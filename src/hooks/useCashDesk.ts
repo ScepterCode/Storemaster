@@ -50,6 +50,8 @@ export const useCashDesk = () => {
   const cartTotal = cart.reduce((sum, item) => sum + item.totalPrice, 0);
   
   const addToCart = (product: Product) => {
+    console.log('Adding product to cart:', product);
+    
     if (product.quantity <= 0) {
       toast({
         title: "Cannot Add Product",
@@ -82,6 +84,7 @@ export const useCashDesk = () => {
       };
       
       setCart(updatedCart);
+      console.log('Updated cart item:', updatedCart[existingItemIndex]);
     } else {
       // New product, add to cart
       const cartItem: CartItem = {
@@ -94,6 +97,7 @@ export const useCashDesk = () => {
       };
       
       setCart([...cart, cartItem]);
+      console.log('Added new cart item:', cartItem);
     }
   };
   
@@ -147,12 +151,14 @@ export const useCashDesk = () => {
     setSelectedCustomer(null);
   };
   
-  const handleCustomerSelect = (customer: Customer) => {
+  const handleCustomerSelect = (customer: Customer | null) => {
+    console.log('Selected customer:', customer);
     setSelectedCustomer(customer);
     setShowNewCustomerForm(false);
   };
   
   const createNewCustomer = async (customerData: Partial<Customer>) => {
+    console.log('Creating new customer:', customerData);
     const newCustomer = await handleAddCustomer(customerData);
     
     if (newCustomer) {
@@ -163,6 +169,8 @@ export const useCashDesk = () => {
   };
   
   const createNewInvoice = () => {
+    console.log('Creating new invoice with customer:', selectedCustomer, 'and cart:', cart);
+    
     if (!selectedCustomer) {
       toast({
         title: "Customer Required",
@@ -191,6 +199,7 @@ export const useCashDesk = () => {
     }));
     
     setCurrentInvoice(invoice);
+    console.log('Created invoice:', invoice);
     return true;
   };
   
