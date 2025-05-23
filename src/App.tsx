@@ -1,83 +1,92 @@
 
-import React from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { ThemeProvider } from '@/contexts/ThemeContext';
+import { SidebarProvider } from '@/contexts/SidebarContext';
+import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { ThemeProvider } from "@/contexts/ThemeContext";
-import LandingPage from "./pages/LandingPage";
-import DashboardPage from "./pages/DashboardPage";
-import TransactionsPage from "./pages/TransactionsPage";
-import InventoryPage from "./pages/InventoryPage";
-import InventoryViewPage from "./pages/InventoryViewPage";
-import StockPage from "./pages/StockPage";
-import ReportsPage from "./pages/ReportsPage";
-import SettingsPage from "./pages/SettingsPage";
-import CashDeskPage from "./pages/CashDeskPage";
-import NotFoundPage from "./pages/NotFoundPage";
-import { useAuth } from "@/contexts/AuthContext";
 
-// Create a new QueryClient instance
-const queryClient = new QueryClient();
+// Pages
+import LandingPage from '@/pages/LandingPage';
+import DashboardPage from '@/pages/DashboardPage';
+import TransactionsPage from '@/pages/TransactionsPage';
+import InventoryPage from '@/pages/InventoryPage';
+import InventoryViewPage from '@/pages/InventoryViewPage';
+import ReportsPage from '@/pages/ReportsPage';
+import SettingsPage from '@/pages/SettingsPage';
+import StockPage from '@/pages/StockPage';
+import CashDeskPage from '@/pages/CashDeskPage';
+import NotFoundPage from '@/pages/NotFoundPage';
+import UnauthorizedPage from '@/pages/UnauthorizedPage';
+import LoginPage from '@/pages/LoginPage';
 
-// Protected route component
-const ProtectedRoute: React.FC<{ element: React.ReactNode }> = ({ element }) => {
-  const { user, loading } = useAuth();
-  
-  // Show loading state while checking authentication
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-  
-  // Redirect to landing page if not authenticated
-  if (!user) {
-    return <Navigate to="/landing" replace />;
-  }
-  
-  // Render the protected content
-  return <>{element}</>;
-};
+// Components
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
-const AppRoutes = () => {
+export default function App() {
   return (
-    <Routes>
-      <Route path="/landing" element={<LandingPage />} />
-      <Route path="/" element={<ProtectedRoute element={<DashboardPage />} />} />
-      <Route path="/dashboard" element={<ProtectedRoute element={<DashboardPage />} />} />
-      <Route path="/transactions" element={<ProtectedRoute element={<TransactionsPage />} />} />
-      <Route path="/inventory" element={<ProtectedRoute element={<InventoryPage />} />} />
-      <Route path="/inventory/view" element={<ProtectedRoute element={<InventoryViewPage />} />} />
-      <Route path="/stock" element={<ProtectedRoute element={<StockPage />} />} />
-      <Route path="/reports" element={<ProtectedRoute element={<ReportsPage />} />} />
-      <Route path="/settings" element={<ProtectedRoute element={<SettingsPage />} />} />
-      <Route path="/cash-desk" element={<ProtectedRoute element={<CashDeskPage />} />} />
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
-  );
-};
-
-const App = () => (
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
+    <ThemeProvider defaultTheme="light" storageKey="theme">
+      <AuthProvider>
+        <SidebarProvider>
           <BrowserRouter>
-            <AuthProvider>
-              <AppRoutes />
-            </AuthProvider>
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              
+              <Route path="/dashboard" element={
+                <ProtectedRoute requiredPermission="dashboard_view">
+                  <DashboardPage />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/transactions" element={
+                <ProtectedRoute requiredPermission="transactions_view">
+                  <TransactionsPage />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/cash-desk" element={
+                <ProtectedRoute requiredPermission="cash_desk_access">
+                  <CashDeskPage />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/inventory" element={
+                <ProtectedRoute requiredPermission="inventory_view">
+                  <InventoryPage />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/inventory/:id" element={
+                <ProtectedRoute requiredPermission="inventory_view">
+                  <InventoryViewPage />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/stock" element={
+                <ProtectedRoute requiredPermission="inventory_view">
+                  <StockPage />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/reports" element={
+                <ProtectedRoute requiredPermission="reports_view">
+                  <ReportsPage />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/settings" element={
+                <ProtectedRoute requiredPermission="settings_view">
+                  <SettingsPage />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/unauthorized" element={<UnauthorizedPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+            <Toaster />
           </BrowserRouter>
-        </TooltipProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
-  </React.StrictMode>
-);
-
-export default App;
+        </SidebarProvider>
+      </AuthProvider>
+    </ThemeProvider>
+  );
+}

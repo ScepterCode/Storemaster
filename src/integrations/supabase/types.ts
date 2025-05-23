@@ -163,6 +163,27 @@ export type Database = {
           },
         ]
       }
+      permissions: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: Database["public"]["Enums"]["permission_type"]
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: Database["public"]["Enums"]["permission_type"]
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: Database["public"]["Enums"]["permission_type"]
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category_id: string | null
@@ -240,6 +261,24 @@ export type Database = {
         }
         Relationships: []
       }
+      role_permissions: {
+        Row: {
+          id: string
+          permission: Database["public"]["Enums"]["permission_type"]
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          id?: string
+          permission: Database["public"]["Enums"]["permission_type"]
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          id?: string
+          permission?: Database["public"]["Enums"]["permission_type"]
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
@@ -293,15 +332,88 @@ export type Database = {
           },
         ]
       }
+      user_permissions: {
+        Row: {
+          created_at: string
+          granted: boolean
+          id: string
+          permission: Database["public"]["Enums"]["permission_type"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted?: boolean
+          id?: string
+          permission: Database["public"]["Enums"]["permission_type"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted?: boolean
+          id?: string
+          permission?: Database["public"]["Enums"]["permission_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      user_has_permission: {
+        Args: {
+          _user_id: string
+          _permission: Database["public"]["Enums"]["permission_type"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "owner" | "manager" | "cashier" | "staff"
+      permission_type:
+        | "dashboard_view"
+        | "cash_desk_access"
+        | "cash_desk_edit"
+        | "transactions_view"
+        | "transactions_edit"
+        | "inventory_view"
+        | "inventory_edit"
+        | "reports_view"
+        | "settings_view"
+        | "settings_edit"
+        | "user_management"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -416,6 +528,21 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["owner", "manager", "cashier", "staff"],
+      permission_type: [
+        "dashboard_view",
+        "cash_desk_access",
+        "cash_desk_edit",
+        "transactions_view",
+        "transactions_edit",
+        "inventory_view",
+        "inventory_edit",
+        "reports_view",
+        "settings_view",
+        "settings_edit",
+        "user_management",
+      ],
+    },
   },
 } as const

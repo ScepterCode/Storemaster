@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   BarChart3Icon,
@@ -9,19 +9,21 @@ import {
   ReceiptIcon,
   LineChartIcon,
   ShoppingCartIcon,
+  PackageIcon,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useSidebar } from '@/contexts/SidebarContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface SidebarNavigationItem {
   label: string;
   icon: React.ReactNode;
   href: string;
   active?: boolean;
+  permission?: string;
 }
 
 interface SidebarProps {
@@ -32,6 +34,7 @@ interface SidebarProps {
 const Sidebar = ({ isSidebarOpen, toggleSidebar }: SidebarProps) => {
   const location = useLocation();
   const { user, signOut } = useAuth();
+  const { hasPermission, loading } = usePermissions();
 
   const isActive = (path: string) => {
     // Special case for dashboard/root path
@@ -48,36 +51,49 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }: SidebarProps) => {
       icon: <BarChart3Icon className="h-4 w-4" />,
       href: '/dashboard',
       active: isActive('/dashboard'),
+      permission: 'dashboard_view'
     },
     {
       label: 'Transactions',
       icon: <ReceiptIcon className="h-4 w-4" />,
       href: '/transactions',
       active: isActive('/transactions'),
+      permission: 'transactions_view'
     },
     {
       label: 'Cash Desk',
       icon: <ShoppingCartIcon className="h-4 w-4" />,
       href: '/cash-desk',
       active: isActive('/cash-desk'),
+      permission: 'cash_desk_access'
     },
     {
       label: 'Inventory',
       icon: <BoxIcon className="h-4 w-4" />,
       href: '/inventory',
       active: isActive('/inventory'),
+      permission: 'inventory_view'
+    },
+    {
+      label: 'Stock',
+      icon: <PackageIcon className="h-4 w-4" />,
+      href: '/stock',
+      active: isActive('/stock'),
+      permission: 'inventory_view'
     },
     {
       label: 'Reports',
       icon: <LineChartIcon className="h-4 w-4" />,
       href: '/reports',
       active: isActive('/reports'),
+      permission: 'reports_view'
     },
     {
       label: 'Settings',
       icon: <SettingsIcon className="h-4 w-4" />,
       href: '/settings',
       active: isActive('/settings'),
+      permission: 'settings_view'
     },
   ];
 
@@ -99,23 +115,30 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }: SidebarProps) => {
 
       <ScrollArea className="flex-1 overflow-hidden">
         <nav className="flex flex-col gap-1 px-2 py-4">
-          {navigationItems.map((item) => (
-            <Button
-              key={item.href}
-              variant={item.active ? 'default' : 'ghost'}
-              asChild
-              size={isSidebarOpen ? 'default' : 'icon'}
-              className={cn(
-                'justify-start',
-                isSidebarOpen ? 'h-10 w-full px-4' : 'h-10 w-10'
-              )}
-            >
-              <Link to={item.href}>
-                {item.icon}
-                {isSidebarOpen && <span className="ml-2">{item.label}</span>}
-              </Link>
-            </Button>
-          ))}
+          {!loading && navigationItems.map((item) => {
+            // Check if user has permission to see this item
+            if (item.permission && !hasPermission(item.permission as any)) {
+              return null;
+            }
+            
+            return (
+              <Button
+                key={item.href}
+                variant={item.active ? 'default' : 'ghost'}
+                asChild
+                size={isSidebarOpen ? 'default' : 'icon'}
+                className={cn(
+                  'justify-start',
+                  isSidebarOpen ? 'h-10 w-full px-4' : 'h-10 w-10'
+                )}
+              >
+                <Link to={item.href}>
+                  {item.icon}
+                  {isSidebarOpen && <span className="ml-2">{item.label}</span>}
+                </Link>
+              </Button>
+            );
+          })}
         </nav>
       </ScrollArea>
 

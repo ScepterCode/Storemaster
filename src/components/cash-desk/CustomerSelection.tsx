@@ -9,6 +9,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Check, ChevronsUpDown, Plus, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface CustomerSelectionProps {
   customers: Customer[];
@@ -34,6 +35,7 @@ const CustomerSelection: React.FC<CustomerSelectionProps> = ({
     email: '',
     address: '',
   });
+  const { canEditCashDesk } = usePermissions();
 
   const handleSubmitNewCustomer = () => {
     onCreateCustomer(newCustomer);
@@ -166,14 +168,16 @@ const CustomerSelection: React.FC<CustomerSelectionProps> = ({
         </PopoverContent>
       </Popover>
       
-      <Button
-        variant="outline"
-        className="w-full"
-        onClick={() => setShowNewCustomerForm(true)}
-      >
-        <Plus className="mr-2 h-4 w-4" />
-        Add New Customer
-      </Button>
+      {canEditCashDesk && (
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => setShowNewCustomerForm(true)}
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add New Customer
+        </Button>
+      )}
     </div>
   );
 };

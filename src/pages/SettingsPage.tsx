@@ -8,12 +8,15 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import UserManagement from '@/components/settings/UserManagement';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const SettingsPage = () => {
   const [businessName, setBusinessName] = useState('Aba Business');
   const [language, setLanguage] = useState('en');
   const [offlineMode, setOfflineMode] = useState(true);
   const [syncOnConnect, setSyncOnConnect] = useState(true);
+  const { canManageUsers, canEditSettings } = usePermissions();
   
   return (
     <AppLayout>
@@ -26,11 +29,14 @@ const SettingsPage = () => {
         </div>
         
         <Tabs defaultValue="general">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 h-12 mb-4">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 h-12 mb-4">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="appearance">Appearance</TabsTrigger>
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="data">Data & Sync</TabsTrigger>
+            {canManageUsers && (
+              <TabsTrigger value="staff">Staff Management</TabsTrigger>
+            )}
           </TabsList>
           
           <TabsContent value="general" className="space-y-4">
@@ -45,12 +51,13 @@ const SettingsPage = () => {
                     id="business-name"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
+                    disabled={!canEditSettings}
                   />
                 </div>
                 
                 <div className="grid gap-2">
                   <Label htmlFor="language">Language</Label>
-                  <Select value={language} onValueChange={setLanguage}>
+                  <Select value={language} onValueChange={setLanguage} disabled={!canEditSettings}>
                     <SelectTrigger id="language">
                       <SelectValue placeholder="Select language" />
                     </SelectTrigger>
@@ -75,7 +82,7 @@ const SettingsPage = () => {
               <CardContent className="space-y-4">
                 <div className="grid gap-2">
                   <Label htmlFor="theme">Theme</Label>
-                  <Select defaultValue="light">
+                  <Select defaultValue="light" disabled={!canEditSettings}>
                     <SelectTrigger id="theme">
                       <SelectValue placeholder="Select theme" />
                     </SelectTrigger>
@@ -121,6 +128,7 @@ const SettingsPage = () => {
                     id="offline-mode"
                     checked={offlineMode}
                     onCheckedChange={setOfflineMode}
+                    disabled={!canEditSettings}
                   />
                 </div>
                 
@@ -135,12 +143,12 @@ const SettingsPage = () => {
                     id="auto-sync"
                     checked={syncOnConnect}
                     onCheckedChange={setSyncOnConnect}
-                    disabled={!offlineMode}
+                    disabled={!offlineMode || !canEditSettings}
                   />
                 </div>
                 
                 <div className="pt-4">
-                  <Button variant="outline" disabled>Export Data</Button>
+                  <Button variant="outline" disabled={!canEditSettings}>Export Data</Button>
                   <p className="text-xs text-muted-foreground mt-2">
                     Data export functionality requires Supabase connection.
                   </p>
@@ -148,6 +156,12 @@ const SettingsPage = () => {
               </CardContent>
             </Card>
           </TabsContent>
+          
+          {canManageUsers && (
+            <TabsContent value="staff" className="space-y-4">
+              <UserManagement />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </AppLayout>

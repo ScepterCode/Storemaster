@@ -3,9 +3,10 @@ import { useState } from 'react';
 import { useProducts } from './useProducts';
 import { useCustomers } from './useCustomers';
 import { useInvoices } from './useInvoices';
-import { CartItem, Customer, Invoice, InvoiceItem, PaymentDetails, Product } from '@/types';
+import { CartItem, Customer, Invoice, PaymentDetails, Product } from '@/types';
 import { generateId } from '@/lib/formatter';
 import { useToast } from '@/components/ui/use-toast';
+import { usePermissions } from '@/hooks/usePermissions';
 
 export const useCashDesk = () => {
   const { products, refreshProducts } = useProducts();
@@ -22,6 +23,8 @@ export const useCashDesk = () => {
     finalizeInvoice,
     markAsPaid
   } = useInvoices();
+  
+  const { canEditCashDesk } = usePermissions();
   
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -50,6 +53,15 @@ export const useCashDesk = () => {
   const cartTotal = cart.reduce((sum, item) => sum + item.totalPrice, 0);
   
   const addToCart = (product: Product) => {
+    if (!canEditCashDesk) {
+      toast({
+        title: "Permission Denied",
+        description: "You don't have permission to modify the cart",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     console.log('Adding product to cart:', product);
     
     if (product.quantity <= 0) {
@@ -102,6 +114,15 @@ export const useCashDesk = () => {
   };
   
   const updateCartItemQuantity = (productId: string, quantity: number) => {
+    if (!canEditCashDesk) {
+      toast({
+        title: "Permission Denied",
+        description: "You don't have permission to modify the cart",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const product = products.find(p => p.id === productId);
     
     if (!product) {
@@ -143,6 +164,15 @@ export const useCashDesk = () => {
   };
   
   const removeFromCart = (productId: string) => {
+    if (!canEditCashDesk) {
+      toast({
+        title: "Permission Denied",
+        description: "You don't have permission to modify the cart",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setCart(cart.filter(item => item.productId !== productId));
   };
   
@@ -158,6 +188,15 @@ export const useCashDesk = () => {
   };
   
   const createNewCustomer = async (customerData: Partial<Customer>) => {
+    if (!canEditCashDesk) {
+      toast({
+        title: "Permission Denied",
+        description: "You don't have permission to create customers",
+        variant: "destructive",
+      });
+      return null;
+    }
+    
     console.log('Creating new customer:', customerData);
     const newCustomer = await handleAddCustomer(customerData);
     
@@ -166,9 +205,20 @@ export const useCashDesk = () => {
       setShowNewCustomerForm(false);
       refreshCustomers();
     }
+    
+    return newCustomer;
   };
   
   const createNewInvoice = () => {
+    if (!canEditCashDesk) {
+      toast({
+        title: "Permission Denied",
+        description: "You don't have permission to create invoices",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
     console.log('Creating new invoice with customer:', selectedCustomer, 'and cart:', cart);
     
     if (!selectedCustomer) {
@@ -204,6 +254,15 @@ export const useCashDesk = () => {
   };
   
   const saveCurrentInvoice = async (): Promise<boolean> => {
+    if (!canEditCashDesk) {
+      toast({
+        title: "Permission Denied",
+        description: "You don't have permission to save invoices",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
     if (!currentInvoice) {
       toast({
         title: "No Invoice",
@@ -217,6 +276,15 @@ export const useCashDesk = () => {
   };
   
   const finalizeCurrentInvoice = async (): Promise<boolean> => {
+    if (!canEditCashDesk) {
+      toast({
+        title: "Permission Denied",
+        description: "You don't have permission to finalize invoices",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
     if (!currentInvoice) {
       toast({
         title: "No Invoice",
@@ -230,6 +298,15 @@ export const useCashDesk = () => {
   };
   
   const processPayment = async (): Promise<boolean> => {
+    if (!canEditCashDesk) {
+      toast({
+        title: "Permission Denied",
+        description: "You don't have permission to process payments",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
     if (!currentInvoice) {
       toast({
         title: "No Invoice",
