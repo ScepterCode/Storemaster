@@ -8,18 +8,28 @@ interface ThemeContextType {
   setTheme: (theme: Theme) => void;
 }
 
+interface ThemeProviderProps {
+  children: React.ReactNode;
+  defaultTheme?: Theme;
+  storageKey?: string;
+}
+
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const ThemeProvider: React.FC<ThemeProviderProps> = ({ 
+  children, 
+  defaultTheme = 'system',
+  storageKey = 'theme'
+}) => {
   const [theme, setTheme] = useState<Theme>(() => {
     // Check local storage for saved theme
-    const savedTheme = localStorage.getItem('theme') as Theme | null;
-    return savedTheme || 'system';
+    const savedTheme = localStorage.getItem(storageKey) as Theme | null;
+    return savedTheme || defaultTheme;
   });
 
   useEffect(() => {
     // Save theme preference to local storage
-    localStorage.setItem('theme', theme);
+    localStorage.setItem(storageKey, theme);
     
     // Apply theme to document
     const root = window.document.documentElement;
@@ -31,7 +41,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } else {
       root.classList.add(theme);
     }
-  }, [theme]);
+  }, [theme, storageKey]);
 
   // Listen for system theme changes
   useEffect(() => {
