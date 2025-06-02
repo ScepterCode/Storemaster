@@ -97,6 +97,13 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }: SidebarProps) => {
     },
   ];
 
+  // Filter items based on permissions
+  const visibleItems = navigationItems.filter(item => {
+    if (loading) return false;
+    if (!item.permission) return true;
+    return hasPermission(item.permission as any);
+  });
+
   return (
     <aside
       className={cn(
@@ -115,30 +122,23 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }: SidebarProps) => {
 
       <ScrollArea className="flex-1 overflow-hidden">
         <nav className="flex flex-col gap-1 px-2 py-4">
-          {!loading && navigationItems.map((item) => {
-            // Check if user has permission to see this item
-            if (item.permission && !hasPermission(item.permission as any)) {
-              return null;
-            }
-            
-            return (
-              <Button
-                key={item.href}
-                variant={item.active ? 'default' : 'ghost'}
-                asChild
-                size={isSidebarOpen ? 'default' : 'icon'}
-                className={cn(
-                  'justify-start',
-                  isSidebarOpen ? 'h-10 w-full px-4' : 'h-10 w-10'
-                )}
-              >
-                <Link to={item.href}>
-                  {item.icon}
-                  {isSidebarOpen && <span className="ml-2">{item.label}</span>}
-                </Link>
-              </Button>
-            );
-          })}
+          {visibleItems.map((item) => (
+            <Button
+              key={item.href}
+              variant={item.active ? 'default' : 'ghost'}
+              asChild
+              size={isSidebarOpen ? 'default' : 'icon'}
+              className={cn(
+                'justify-start',
+                isSidebarOpen ? 'h-10 w-full px-4' : 'h-10 w-10'
+              )}
+            >
+              <Link to={item.href}>
+                {item.icon}
+                {isSidebarOpen && <span className="ml-2">{item.label}</span>}
+              </Link>
+            </Button>
+          ))}
         </nav>
       </ScrollArea>
 

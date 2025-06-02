@@ -1,164 +1,66 @@
 
-import React, { useState } from 'react';
-import AppLayout from '@/components/layout/AppLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import AppLayout from '@/components/layout/AppLayout';
 import UserManagement from '@/components/settings/UserManagement';
+import NotificationSettings from '@/components/settings/NotificationSettings';
 import { usePermissions } from '@/hooks/usePermissions';
 
 const SettingsPage = () => {
-  const [businessName, setBusinessName] = useState('Aba Business');
-  const [language, setLanguage] = useState('en');
-  const [offlineMode, setOfflineMode] = useState(true);
-  const [syncOnConnect, setSyncOnConnect] = useState(true);
-  const { canManageUsers, canEditSettings } = usePermissions();
-  
+  const [searchParams] = useSearchParams();
+  const { hasPermission } = usePermissions();
+  const [activeTab, setActiveTab] = useState('general');
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
   return (
     <AppLayout>
-      <div className="space-y-6 animate-fade-in">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Settings</h1>
-            <p className="text-muted-foreground">Configure your business preferences</p>
-          </div>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+          <p className="text-muted-foreground">
+            Manage your application settings and preferences.
+          </p>
         </div>
-        
-        <Tabs defaultValue="general">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 h-12 mb-4">
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList>
             <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="appearance">Appearance</TabsTrigger>
-            <TabsTrigger value="account">Account</TabsTrigger>
-            <TabsTrigger value="data">Data & Sync</TabsTrigger>
-            {canManageUsers && (
-              <TabsTrigger value="staff">Staff Management</TabsTrigger>
+            <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            {hasPermission('user_management') && (
+              <TabsTrigger value="users">User Management</TabsTrigger>
             )}
           </TabsList>
-          
+
           <TabsContent value="general" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Business Information</CardTitle>
+                <CardTitle>General Settings</CardTitle>
+                <CardDescription>
+                  Configure general application preferences.
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="business-name">Business Name</Label>
-                  <Input
-                    id="business-name"
-                    value={businessName}
-                    onChange={(e) => setBusinessName(e.target.value)}
-                    disabled={!canEditSettings}
-                  />
-                </div>
-                
-                <div className="grid gap-2">
-                  <Label htmlFor="language">Language</Label>
-                  <Select value={language} onValueChange={setLanguage} disabled={!canEditSettings}>
-                    <SelectTrigger id="language">
-                      <SelectValue placeholder="Select language" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="en">English</SelectItem>
-                      <SelectItem value="ig">Igbo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    The language setting requires Supabase connection to fully enable translations.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="appearance" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Theme Settings</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="theme">Theme</Label>
-                  <Select defaultValue="light" disabled={!canEditSettings}>
-                    <SelectTrigger id="theme">
-                      <SelectValue placeholder="Select theme" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="light">Light</SelectItem>
-                      <SelectItem value="dark">Dark</SelectItem>
-                      <SelectItem value="system">System</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="account" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Account Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent>
                 <p className="text-muted-foreground">
-                  Connect to Supabase to enable user accounts and multi-user access.
+                  General settings will be implemented here.
                 </p>
-                <Button variant="outline">Connect to Supabase</Button>
               </CardContent>
             </Card>
           </TabsContent>
-          
-          <TabsContent value="data" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Offline Settings</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="offline-mode">Enable Offline Mode</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Allow the app to function when internet is unavailable
-                    </p>
-                  </div>
-                  <Switch
-                    id="offline-mode"
-                    checked={offlineMode}
-                    onCheckedChange={setOfflineMode}
-                    disabled={!canEditSettings}
-                  />
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="auto-sync">Sync Automatically</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Automatically sync data when internet connection is restored
-                    </p>
-                  </div>
-                  <Switch
-                    id="auto-sync"
-                    checked={syncOnConnect}
-                    onCheckedChange={setSyncOnConnect}
-                    disabled={!offlineMode || !canEditSettings}
-                  />
-                </div>
-                
-                <div className="pt-4">
-                  <Button variant="outline" disabled={!canEditSettings}>Export Data</Button>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Data export functionality requires Supabase connection.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+
+          <TabsContent value="notifications" className="space-y-4">
+            <NotificationSettings />
           </TabsContent>
-          
-          {canManageUsers && (
-            <TabsContent value="staff" className="space-y-4">
+
+          {hasPermission('user_management') && (
+            <TabsContent value="users" className="space-y-4">
               <UserManagement />
             </TabsContent>
           )}
