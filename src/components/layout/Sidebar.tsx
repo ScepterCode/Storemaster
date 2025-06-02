@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -96,19 +97,16 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }: SidebarProps) => {
     },
   ];
 
-  // Show all items while loading, then filter based on permissions
+  // Always show items that have permissions, only filter out those explicitly denied
   const visibleItems = navigationItems.filter(item => {
     // If no permission required, always show
     if (!item.permission) return true;
     
-    // If still loading permissions, show all items temporarily
-    if (loading) return true;
-    
-    // Once loaded, check if user has the required permission
+    // Show item if user has permission (includes default permissions)
     return hasPermission(item.permission as any);
   });
 
-  console.log('Sidebar render - loading:', loading, 'visibleItems count:', visibleItems.length);
+  console.log('Sidebar render - loading:', loading, 'visible items:', visibleItems.length, 'total items:', navigationItems.length);
 
   return (
     <aside

@@ -1,7 +1,7 @@
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
 
 export type Permission = 
   | 'dashboard_view'
@@ -23,11 +23,21 @@ export interface UserPermission {
   granted: boolean;
 }
 
+// Default permissions that every authenticated user should have
+const DEFAULT_PERMISSIONS: Permission[] = [
+  'dashboard_view',
+  'cash_desk_access',
+  'transactions_view',
+  'inventory_view',
+  'reports_view',
+  'settings_view'
+];
+
 export const usePermissions = () => {
   const { user } = useAuth();
   const [role, setRole] = useState<UserRole | null>(null);
-  const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [permissions, setPermissions] = useState<Permission[]>(DEFAULT_PERMISSIONS);
+  const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
     if (!user) {
@@ -36,23 +46,29 @@ export const usePermissions = () => {
       setLoading(false);
       return;
     }
+
+    // Always start with default permissions for authenticated users
+    setPermissions(DEFAULT_PERMISSIONS);
     
-    const fetchUserRole = async () => {
+    const fetchPermissions = async () => {
       try {
         setLoading(true);
-        console.log('Fetching user role for:', user.id);
+        console.log('Fetching permissions for user:', user.id);
         
-        // Get user role
-        const { data: roleData, error: roleError } = await supabase.rpc(
-          'get_user_role',
-          { _user_id: user.id }
+        // Get user role with timeout
+        const rolePromise = supabase.rpc('get_user_role', { _user_id: user.id });
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 5000)
         );
         
+        const { data: roleData, error: roleError } = await Promise.race([
+          rolePromise,
+          timeoutPromise
+        ]) as any;
+        
         if (roleError) {
-          console.warn('Error fetching user role:', roleError);
-          // If role fetch fails, give default permissions
+          console.warn('Role fetch failed, using default:', roleError);
           setRole('staff');
-          setPermissions(['dashboard_view', 'cash_desk_access', 'transactions_view', 'inventory_view']);
           setLoading(false);
           return;
         }
@@ -67,56 +83,54 @@ export const usePermissions = () => {
           .eq('role', roleData);
           
         if (permissionsError) {
-          console.warn('Error fetching role permissions:', permissionsError);
-          // If permissions fetch fails, give basic permissions
-          setPermissions(['dashboard_view', 'cash_desk_access', 'transactions_view', 'inventory_view']);
+          console.warn('Permissions fetch failed, keeping defaults:', permissionsError);
           setLoading(false);
           return;
         }
         
         // Get user-specific permissions
-        const { data: userPermissions, error: userPermissionsError } = await supabase
+        const { data: userPermissions } = await supabase
           .from('user_permissions')
           .select('permission, granted')
           .eq('user_id', user.id);
-          
-        if (userPermissionsError) {
-          console.warn('Error fetching user permissions:', userPermissionsError);
-        }
         
-        // Combine permissions: start with role permissions
-        let effectivePermissions = rolePermissions?.map(rp => rp.permission as Permission) || [];
+        // Build final permissions list
+        let finalPermissions = [...DEFAULT_PERMISSIONS];
         
-        // If no role permissions found, give basic permissions
-        if (effectivePermissions.length === 0) {
-          effectivePermissions = ['dashboard_view', 'cash_desk_access', 'transactions_view', 'inventory_view'];
-        }
-        
-        // Apply user-specific overrides if they exist
-        if (userPermissions) {
-          userPermissions.forEach(up => {
-            if (up.granted && !effectivePermissions.includes(up.permission)) {
-              effectivePermissions.push(up.permission as Permission);
-            } else if (!up.granted) {
-              effectivePermissions = effectivePermissions.filter(p => p !== up.permission);
+        // Add role permissions
+        if (rolePermissions?.length > 0) {
+          rolePermissions.forEach(rp => {
+            const permission = rp.permission as Permission;
+            if (!finalPermissions.includes(permission)) {
+              finalPermissions.push(permission);
             }
           });
         }
         
-        console.log('Final effective permissions:', effectivePermissions);
-        setPermissions(effectivePermissions);
+        // Apply user-specific overrides
+        if (userPermissions?.length > 0) {
+          userPermissions.forEach(up => {
+            const permission = up.permission as Permission;
+            if (up.granted && !finalPermissions.includes(permission)) {
+              finalPermissions.push(permission);
+            } else if (!up.granted) {
+              finalPermissions = finalPermissions.filter(p => p !== permission);
+            }
+          });
+        }
+        
+        console.log('Final permissions:', finalPermissions);
+        setPermissions(finalPermissions);
       } catch (error) {
         console.error('Error fetching permissions:', error);
         // On any error, provide basic permissions so user can still navigate
         setRole('staff');
-        setPermissions(['dashboard_view', 'cash_desk_access', 'transactions_view', 'inventory_view']);
-        toast.error('Failed to load user permissions, using default permissions');
       } finally {
         setLoading(false);
       }
     };
     
-    fetchUserRole();
+    fetchPermissions();
   }, [user]);
   
   const hasPermission = (permission: Permission): boolean => {
