@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -41,6 +40,7 @@ export const usePermissions = () => {
     const fetchUserRole = async () => {
       try {
         setLoading(true);
+        console.log('Fetching user role for:', user.id);
         
         // Get user role
         const { data: roleData, error: roleError } = await supabase.rpc(
@@ -48,7 +48,16 @@ export const usePermissions = () => {
           { _user_id: user.id }
         );
         
-        if (roleError) throw roleError;
+        if (roleError) {
+          console.warn('Error fetching user role:', roleError);
+          // If role fetch fails, give default permissions
+          setRole('staff');
+          setPermissions(['dashboard_view', 'cash_desk_access', 'transactions_view', 'inventory_view']);
+          setLoading(false);
+          return;
+        }
+        
+        console.log('User role:', roleData);
         setRole(roleData as UserRole);
         
         // Get role permissions
@@ -57,7 +66,13 @@ export const usePermissions = () => {
           .select('permission')
           .eq('role', roleData);
           
-        if (permissionsError) throw permissionsError;
+        if (permissionsError) {
+          console.warn('Error fetching role permissions:', permissionsError);
+          // If permissions fetch fails, give basic permissions
+          setPermissions(['dashboard_view', 'cash_desk_access', 'transactions_view', 'inventory_view']);
+          setLoading(false);
+          return;
+        }
         
         // Get user-specific permissions
         const { data: userPermissions, error: userPermissionsError } = await supabase
@@ -65,24 +80,37 @@ export const usePermissions = () => {
           .select('permission, granted')
           .eq('user_id', user.id);
           
-        if (userPermissionsError) throw userPermissionsError;
+        if (userPermissionsError) {
+          console.warn('Error fetching user permissions:', userPermissionsError);
+        }
         
         // Combine permissions: start with role permissions
-        let effectivePermissions = rolePermissions.map(rp => rp.permission as Permission);
+        let effectivePermissions = rolePermissions?.map(rp => rp.permission as Permission) || [];
         
-        // Apply user-specific overrides
-        userPermissions.forEach(up => {
-          if (up.granted && !effectivePermissions.includes(up.permission)) {
-            effectivePermissions.push(up.permission as Permission);
-          } else if (!up.granted) {
-            effectivePermissions = effectivePermissions.filter(p => p !== up.permission);
-          }
-        });
+        // If no role permissions found, give basic permissions
+        if (effectivePermissions.length === 0) {
+          effectivePermissions = ['dashboard_view', 'cash_desk_access', 'transactions_view', 'inventory_view'];
+        }
         
+        // Apply user-specific overrides if they exist
+        if (userPermissions) {
+          userPermissions.forEach(up => {
+            if (up.granted && !effectivePermissions.includes(up.permission)) {
+              effectivePermissions.push(up.permission as Permission);
+            } else if (!up.granted) {
+              effectivePermissions = effectivePermissions.filter(p => p !== up.permission);
+            }
+          });
+        }
+        
+        console.log('Final effective permissions:', effectivePermissions);
         setPermissions(effectivePermissions);
       } catch (error) {
         console.error('Error fetching permissions:', error);
-        toast.error('Failed to load user permissions');
+        // On any error, provide basic permissions so user can still navigate
+        setRole('staff');
+        setPermissions(['dashboard_view', 'cash_desk_access', 'transactions_view', 'inventory_view']);
+        toast.error('Failed to load user permissions, using default permissions');
       } finally {
         setLoading(false);
       }
