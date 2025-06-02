@@ -97,10 +97,15 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }: SidebarProps) => {
     },
   ];
 
-  // Filter items based on permissions
+  // Filter items based on permissions - show all items when loading or when user has permission
   const visibleItems = navigationItems.filter(item => {
-    if (loading) return false;
+    // If no permission required, always show
     if (!item.permission) return true;
+    
+    // If still loading permissions, show all items (will be filtered once loaded)
+    if (loading) return true;
+    
+    // Check if user has the required permission
     return hasPermission(item.permission as any);
   });
 
