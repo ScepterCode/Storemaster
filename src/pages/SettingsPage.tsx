@@ -22,7 +22,10 @@ const SettingsPage = () => {
   }, [searchParams]);
 
   // Show employee management to owners, managers, or users with explicit user_management permission
-  const canManageEmployees = role === 'owner' || role === 'manager' || hasPermission('user_management');
+  // For now, also show to staff for testing - remove this line later
+  const canManageEmployees = role === 'owner' || role === 'manager' || hasPermission('user_management') || role === 'staff';
+
+  console.log('Settings page - role:', role, 'canManageEmployees:', canManageEmployees);
 
   return (
     <AppLayout>

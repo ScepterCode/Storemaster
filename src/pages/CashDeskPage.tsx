@@ -14,8 +14,10 @@ import PaymentForm from '@/components/cash-desk/PaymentForm';
 import Receipt from '@/components/cash-desk/Receipt';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ShoppingCart, CreditCard, Printer } from 'lucide-react';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const CashDeskPage = () => {
+  const { canEditCashDesk } = usePermissions();
   const [activeTab, setActiveTab] = useState<string>('sale');
   const [receiptMode, setReceiptMode] = useState<boolean>(false);
   
@@ -42,12 +44,14 @@ const CashDeskPage = () => {
     clearCart,
   } = useCashDesk();
 
-  console.log('Current state:', {
+  console.log('CashDesk state:', {
     cart: cart.length,
     selectedCustomer,
     activeTab,
     products: products.length,
-    customers: customers.length
+    customers: customers.length,
+    canEditCashDesk,
+    receiptMode
   });
 
   const handleCheckout = () => {
@@ -72,6 +76,20 @@ const CashDeskPage = () => {
 
   const canProceedToCheckout = cart.length > 0 && selectedCustomer !== null;
 
+  // Check if user can edit cash desk
+  if (!canEditCashDesk) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
+            <p className="text-muted-foreground">You don't have permission to edit cash desk transactions.</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -95,15 +113,17 @@ const CashDeskPage = () => {
         ) : (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="animate-fade-in">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="sale">
-                <ShoppingCart className="mr-2 h-4 w-4" /> Sale
+              <TabsTrigger value="sale" className="flex items-center gap-2">
+                <ShoppingCart className="h-4 w-4" />
+                Sale
               </TabsTrigger>
-              <TabsTrigger value="checkout" disabled={!canProceedToCheckout}>
-                <CreditCard className="mr-2 h-4 w-4" /> Checkout
+              <TabsTrigger value="checkout" disabled={!canProceedToCheckout} className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                Checkout
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="sale" className="space-y-4">
+            <TabsContent value="sale" className="space-y-4 mt-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Left column - Customer selection */}
                 <Card className="md:col-span-1">
@@ -173,7 +193,7 @@ const CashDeskPage = () => {
               </div>
             </TabsContent>
 
-            <TabsContent value="checkout" className="space-y-4">
+            <TabsContent value="checkout" className="space-y-4 mt-6">
               <Card>
                 <CardHeader>
                   <CardTitle>Payment</CardTitle>
