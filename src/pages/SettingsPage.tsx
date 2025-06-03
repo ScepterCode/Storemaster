@@ -6,6 +6,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import UserManagement from '@/components/settings/UserManagement';
 import NotificationSettings from '@/components/settings/NotificationSettings';
 import GeneralSettings from '@/components/settings/GeneralSettings';
+import EmployeeManagement from '@/components/settings/EmployeeManagement';
 import { usePermissions } from '@/hooks/usePermissions';
 
 const SettingsPage = () => {
@@ -35,7 +36,10 @@ const SettingsPage = () => {
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             {hasPermission('user_management') && (
-              <TabsTrigger value="users">User Management</TabsTrigger>
+              <>
+                <TabsTrigger value="employees">Add Employee</TabsTrigger>
+                <TabsTrigger value="users">User Management</TabsTrigger>
+              </>
             )}
           </TabsList>
 
@@ -48,9 +52,15 @@ const SettingsPage = () => {
           </TabsContent>
 
           {hasPermission('user_management') && (
-            <TabsContent value="users" className="space-y-4">
-              <UserManagement />
-            </TabsContent>
+            <>
+              <TabsContent value="employees" className="space-y-4">
+                <EmployeeManagement />
+              </TabsContent>
+              
+              <TabsContent value="users" className="space-y-4">
+                <UserManagement />
+              </TabsContent>
+            </>
           )}
         </Tabs>
       </div>

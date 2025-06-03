@@ -162,6 +162,7 @@ const CashDeskPage = () => {
                         <Button
                           onClick={handleCheckout}
                           disabled={!canProceedToCheckout}
+                          className="w-full sm:w-auto"
                         >
                           Proceed to Checkout
                         </Button>
