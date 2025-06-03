@@ -2,10 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/components/layout/AppLayout';
 import UserManagement from '@/components/settings/UserManagement';
 import NotificationSettings from '@/components/settings/NotificationSettings';
+import GeneralSettings from '@/components/settings/GeneralSettings';
 import { usePermissions } from '@/hooks/usePermissions';
 
 const SettingsPage = () => {
@@ -40,19 +40,7 @@ const SettingsPage = () => {
           </TabsList>
 
           <TabsContent value="general" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>General Settings</CardTitle>
-                <CardDescription>
-                  Configure general application preferences.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  General settings will be implemented here.
-                </p>
-              </CardContent>
-            </Card>
+            <GeneralSettings />
           </TabsContent>
 
           <TabsContent value="notifications" className="space-y-4">
