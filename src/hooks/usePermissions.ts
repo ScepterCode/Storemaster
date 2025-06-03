@@ -27,6 +27,7 @@ export interface UserPermission {
 const DEFAULT_PERMISSIONS: Permission[] = [
   'dashboard_view',
   'cash_desk_access',
+  'cash_desk_edit',  // Added this to default permissions
   'transactions_view',
   'inventory_view',
   'reports_view',

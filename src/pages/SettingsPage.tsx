@@ -11,7 +11,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 
 const SettingsPage = () => {
   const [searchParams] = useSearchParams();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, role } = usePermissions();
   const [activeTab, setActiveTab] = useState('general');
 
   useEffect(() => {
@@ -20,6 +20,9 @@ const SettingsPage = () => {
       setActiveTab(tab);
     }
   }, [searchParams]);
+
+  // Show employee management to owners, managers, or users with explicit user_management permission
+  const canManageEmployees = role === 'owner' || role === 'manager' || hasPermission('user_management');
 
   return (
     <AppLayout>
@@ -35,7 +38,7 @@ const SettingsPage = () => {
           <TabsList>
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            {hasPermission('user_management') && (
+            {canManageEmployees && (
               <>
                 <TabsTrigger value="employees">Add Employee</TabsTrigger>
                 <TabsTrigger value="users">User Management</TabsTrigger>
@@ -51,7 +54,7 @@ const SettingsPage = () => {
             <NotificationSettings />
           </TabsContent>
 
-          {hasPermission('user_management') && (
+          {canManageEmployees && (
             <>
               <TabsContent value="employees" className="space-y-4">
                 <EmployeeManagement />
