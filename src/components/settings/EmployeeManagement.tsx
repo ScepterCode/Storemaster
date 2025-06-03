@@ -32,7 +32,23 @@ const EmployeeManagement = () => {
     password: '',
     role: 'staff' as UserRole,
   });
-  const [customPermissions, setCustomPermissions] = useState<Record<Permission, boolean>>({} as Record<Permission, boolean>);
+  
+  // Initialize with proper type - all permissions set to false by default
+  const initialPermissions: Record<Permission, boolean> = {
+    dashboard_view: false,
+    cash_desk_access: false,
+    cash_desk_edit: false,
+    transactions_view: false,
+    transactions_edit: false,
+    inventory_view: false,
+    inventory_edit: false,
+    reports_view: false,
+    settings_view: false,
+    settings_edit: false,
+    user_management: false,
+  };
+  
+  const [customPermissions, setCustomPermissions] = useState<Record<Permission, boolean>>(initialPermissions);
   const [isCreating, setIsCreating] = useState(false);
 
   const handleCreateEmployee = async () => {
@@ -84,7 +100,7 @@ const EmployeeManagement = () => {
       
       // Reset form
       setNewEmployee({ email: '', password: '', role: 'staff' });
-      setCustomPermissions({});
+      setCustomPermissions(initialPermissions);
 
     } catch (error) {
       console.error('Error creating employee:', error);
