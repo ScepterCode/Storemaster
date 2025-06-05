@@ -1,95 +1,102 @@
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { QueryClient } from 'react-query';
+import { AuthProvider } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
+import { SidebarProvider } from './contexts/SidebarContext';
+import { ThemeProvider } from './components/ui/theme-provider';
+import DashboardPage from './pages/DashboardPage';
+import ProductsPage from './pages/ProductsPage';
+import CustomersPage from './pages/CustomersPage';
+import InvoicesPage from './pages/InvoicesPage';
+import SettingsPage from './pages/SettingsPage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import ProtectedRoute from './components/ProtectedRoute';
+import CashdeskPage from './pages/CashDeskPage';
+import ManagerOverviewPage from './pages/ManagerOverviewPage';
 
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import { ThemeProvider } from '@/contexts/ThemeContext';
-import { SidebarProvider } from '@/contexts/SidebarContext';
-import { Toaster } from "@/components/ui/sonner";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { NotificationProvider } from "@/contexts/NotificationContext";
-
-// Pages
-import LandingPage from '@/pages/LandingPage';
-import DashboardPage from '@/pages/DashboardPage';
-import TransactionsPage from '@/pages/TransactionsPage';
-import InventoryPage from '@/pages/InventoryPage';
-import InventoryViewPage from '@/pages/InventoryViewPage';
-import ReportsPage from '@/pages/ReportsPage';
-import SettingsPage from '@/pages/SettingsPage';
-import StockPage from '@/pages/StockPage';
-import CashDeskPage from '@/pages/CashDeskPage';
-import NotFoundPage from '@/pages/NotFoundPage';
-import UnauthorizedPage from '@/pages/UnauthorizedPage';
-import LoginPage from '@/pages/LoginPage';
-
-// Components
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
-
-export default function App() {
+function App() {
   return (
-    <ThemeProvider defaultTheme="light" storageKey="theme">
+    <QueryClient>
       <AuthProvider>
         <NotificationProvider>
           <SidebarProvider>
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/login" element={<LoginPage />} />
-                
-                <Route path="/dashboard" element={
-                  <ProtectedRoute requiredPermission="dashboard_view">
-                    <DashboardPage />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/transactions" element={
-                  <ProtectedRoute requiredPermission="transactions_view">
-                    <TransactionsPage />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/cash-desk" element={
-                  <ProtectedRoute requiredPermission="cash_desk_access">
-                    <CashDeskPage />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/inventory" element={
-                  <ProtectedRoute requiredPermission="inventory_view">
-                    <InventoryPage />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/inventory/:id" element={
-                  <ProtectedRoute requiredPermission="inventory_view">
-                    <InventoryViewPage />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/stock" element={
-                  <ProtectedRoute requiredPermission="inventory_view">
-                    <StockPage />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/reports" element={
-                  <ProtectedRoute requiredPermission="reports_view">
-                    <ReportsPage />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/settings" element={
-                  <ProtectedRoute requiredPermission="settings_view">
-                    <SettingsPage />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/unauthorized" element={<UnauthorizedPage />} />
-                <Route path="*" element={<NotFoundPage />} />
-              </Routes>
-              <Toaster />
-            </BrowserRouter>
+            <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+              <div className="min-h-screen bg-background">
+                <Router>
+                  <Routes>
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                    <Route path="/reset-password" element={<ResetPasswordPage />} />
+                    <Route 
+                      path="/" 
+                      element={
+                        <ProtectedRoute>
+                          <DashboardPage />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/products" 
+                      element={
+                        <ProtectedRoute>
+                          <ProductsPage />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/customers" 
+                      element={
+                        <ProtectedRoute>
+                          <CustomersPage />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/invoices" 
+                      element={
+                        <ProtectedRoute>
+                          <InvoicesPage />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/settings" 
+                      element={
+                        <ProtectedRoute>
+                          <SettingsPage />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/cashdesk" 
+                      element={
+                        <ProtectedRoute>
+                          <CashdeskPage />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/manager-overview" 
+                      element={
+                        <ProtectedRoute>
+                          <ManagerOverviewPage />
+                        </ProtectedRoute>
+                      } 
+                    />
+                  </Routes>
+                </Router>
+              </div>
+            </ThemeProvider>
           </SidebarProvider>
         </NotificationProvider>
       </AuthProvider>
-    </ThemeProvider>
+    </QueryClient>
   );
 }
+
+export default App;
