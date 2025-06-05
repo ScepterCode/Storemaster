@@ -53,12 +53,12 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ onAddItem }) => {
       productId: product.id,
       productName: product.name,
       sku: product.id,
-      unitPrice: product.unitPrice || product.selling_price || 0,
+      unitPrice: product.unitPrice || 0,
       quantity: 1,
-      subtotal: product.unitPrice || product.selling_price || 0,
+      subtotal: product.unitPrice || 0,
       taxRate: 0.075, // 7.5% VAT
-      taxAmount: (product.unitPrice || product.selling_price || 0) * 0.075,
-      total: (product.unitPrice || product.selling_price || 0) * 1.075
+      taxAmount: (product.unitPrice || 0) * 0.075,
+      total: (product.unitPrice || 0) * 1.075
     };
 
     onAddItem(saleItem);
@@ -155,7 +155,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ onAddItem }) => {
                 </div>
                 <div className="text-right">
                   <div className="font-semibold">
-                    ₦{(product.unitPrice || product.selling_price || 0).toFixed(2)}
+                    ₦{(product.unitPrice || 0).toFixed(2)}
                   </div>
                   <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
                     <Plus className="h-4 w-4" />
