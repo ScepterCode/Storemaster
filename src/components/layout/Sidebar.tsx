@@ -10,6 +10,7 @@ import {
   LineChartIcon,
   ShoppingCartIcon,
   PackageIcon,
+  Users,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -63,9 +64,16 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }: SidebarProps) => {
     {
       label: 'Cash Desk',
       icon: <ShoppingCartIcon className="h-4 w-4" />,
-      href: '/cash-desk',
-      active: isActive('/cash-desk'),
+      href: '/cashdesk',
+      active: isActive('/cashdesk'),
       permission: 'cash_desk_access'
+    },
+    {
+      label: 'Manager Overview',
+      icon: <Users className="h-4 w-4" />,
+      href: '/manager-overview',
+      active: isActive('/manager-overview'),
+      permission: 'reports_view'
     },
     {
       label: 'Inventory',
