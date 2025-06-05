@@ -1,35 +1,23 @@
 
-import { v4 as uuidv4 } from 'uuid';
-
-/**
- * Generates a unique ID
- */
-export const generateId = (): string => {
-  return uuidv4();
+export const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+    minimumFractionDigits: 2,
+  }).format(amount);
 };
 
-/**
- * Formats a number as currency (Naira)
- */
-export const formatNaira = (amount: number): string => {
-  return `₦${amount.toFixed(2)}`;
+export const formatNumber = (value: number): string => {
+  return new Intl.NumberFormat('en-US').format(value);
 };
 
-/**
- * Formats a date string (YYYY-MM-DD) to a more readable format
- */
-export const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-NG', {
+export const formatDate = (date: Date | string): string => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  return new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
-  });
-};
-
-/**
- * Formats a percentage
- */
-export const formatPercentage = (value: number): string => {
-  return `${(value * 100).toFixed(1)}%`;
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(dateObj);
 };

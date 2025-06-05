@@ -1,26 +1,23 @@
+
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { QueryClient } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { SidebarProvider } from './contexts/SidebarContext';
-import { ThemeProvider } from './components/ui/theme-provider';
+import { ThemeProvider } from './contexts/ThemeContext';
 import DashboardPage from './pages/DashboardPage';
-import ProductsPage from './pages/ProductsPage';
-import CustomersPage from './pages/CustomersPage';
-import InvoicesPage from './pages/InvoicesPage';
 import SettingsPage from './pages/SettingsPage';
 import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import ProtectedRoute from './components/ProtectedRoute';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 import CashdeskPage from './pages/CashDeskPage';
 import ManagerOverviewPage from './pages/ManagerOverviewPage';
 
+const queryClient = new QueryClient();
+
 function App() {
   return (
-    <QueryClient>
+    <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <NotificationProvider>
           <SidebarProvider>
@@ -29,38 +26,11 @@ function App() {
                 <Router>
                   <Routes>
                     <Route path="/login" element={<LoginPage />} />
-                    <Route path="/register" element={<RegisterPage />} />
-                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                    <Route path="/reset-password" element={<ResetPasswordPage />} />
                     <Route 
                       path="/" 
                       element={
                         <ProtectedRoute>
                           <DashboardPage />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/products" 
-                      element={
-                        <ProtectedRoute>
-                          <ProductsPage />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/customers" 
-                      element={
-                        <ProtectedRoute>
-                          <CustomersPage />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/invoices" 
-                      element={
-                        <ProtectedRoute>
-                          <InvoicesPage />
                         </ProtectedRoute>
                       } 
                     />
@@ -95,7 +65,7 @@ function App() {
           </SidebarProvider>
         </NotificationProvider>
       </AuthProvider>
-    </QueryClient>
+    </QueryClientProvider>
   );
 }
 

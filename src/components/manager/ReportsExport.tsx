@@ -142,7 +142,7 @@ const ReportsExport = () => {
                 <Checkbox 
                   id="include-voided"
                   checked={includeVoided}
-                  onCheckedChange={setIncludeVoided}
+                  onCheckedChange={(checked) => setIncludeVoided(checked === true)}
                 />
                 <Label htmlFor="include-voided">Include voided transactions</Label>
               </div>
@@ -151,7 +151,7 @@ const ReportsExport = () => {
                 <Checkbox 
                   id="include-refunded"
                   checked={includeRefunded}
-                  onCheckedChange={setIncludeRefunded}
+                  onCheckedChange={(checked) => setIncludeRefunded(checked === true)}
                 />
                 <Label htmlFor="include-refunded">Include refunded transactions</Label>
               </div>
