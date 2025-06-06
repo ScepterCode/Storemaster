@@ -21,9 +21,11 @@ const AVAILABLE_PERMISSIONS: { permission: Permission; label: string; descriptio
   { permission: 'inventory_view', label: 'View Inventory', description: 'View products and stock levels' },
   { permission: 'inventory_edit', label: 'Edit Inventory', description: 'Add, edit, and delete products' },
   { permission: 'reports_view', label: 'View Reports', description: 'Access business reports and analytics' },
+  { permission: 'reports_edit', label: 'Edit Reports', description: 'Modify and create reports' },
   { permission: 'settings_view', label: 'View Settings', description: 'Access application settings' },
   { permission: 'settings_edit', label: 'Edit Settings', description: 'Modify application configuration' },
   { permission: 'user_management', label: 'User Management', description: 'Manage staff accounts and permissions' },
+  { permission: 'admin_access', label: 'Admin Access', description: 'Full administrative access' },
 ];
 
 const EmployeeManagement = () => {
@@ -43,9 +45,11 @@ const EmployeeManagement = () => {
     inventory_view: false,
     inventory_edit: false,
     reports_view: false,
+    reports_edit: false,
     settings_view: false,
     settings_edit: false,
     user_management: false,
+    admin_access: false,
   };
   
   const [customPermissions, setCustomPermissions] = useState<Record<Permission, boolean>>(initialPermissions);
@@ -84,7 +88,7 @@ const EmployeeManagement = () => {
         .filter(([_, granted]) => granted)
         .map(([permission]) => ({
           user_id: userData.user.id,
-          permission: permission as Permission,
+          permission: permission,
           granted: true,
         }));
 

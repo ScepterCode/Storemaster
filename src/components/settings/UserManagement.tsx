@@ -45,6 +45,23 @@ const UserManagement = () => {
   const [allPermissions, setAllPermissions] = useState<RolePermission[]>([]);
   const [userPermissions, setUserPermissions] = useState<Record<Permission, boolean>>({} as Record<Permission, boolean>);
 
+  // Define all available permissions
+  const availablePermissions: RolePermission[] = [
+    { permission: 'dashboard_view', description: 'View dashboard and analytics' },
+    { permission: 'transactions_view', description: 'View transaction history' },
+    { permission: 'transactions_edit', description: 'Modify transaction records' },
+    { permission: 'cash_desk_access', description: 'Access the point of sale system' },
+    { permission: 'cash_desk_edit', description: 'Modify cash desk transactions' },
+    { permission: 'inventory_view', description: 'View products and stock levels' },
+    { permission: 'inventory_edit', description: 'Add, edit, and delete products' },
+    { permission: 'reports_view', description: 'Access business reports and analytics' },
+    { permission: 'reports_edit', description: 'Modify and create reports' },
+    { permission: 'settings_view', description: 'Access application settings' },
+    { permission: 'settings_edit', description: 'Modify application configuration' },
+    { permission: 'user_management', description: 'Manage staff accounts and permissions' },
+    { permission: 'admin_access', description: 'Full administrative access' },
+  ];
+
   // Fetch users with their roles
   useEffect(() => {
     const fetchUsers = async () => {
@@ -94,27 +111,9 @@ const UserManagement = () => {
     fetchUsers();
   }, []);
 
-  // Fetch all permissions
+  // Set all permissions
   useEffect(() => {
-    const fetchPermissions = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('permissions')
-          .select('name, description');
-          
-        if (error) throw error;
-        
-        setAllPermissions(data.map(p => ({
-          permission: p.name as Permission,
-          description: p.description || p.name
-        })));
-      } catch (error) {
-        console.error('Error fetching permissions:', error);
-        toast.error('Failed to load permissions');
-      }
-    };
-    
-    fetchPermissions();
+    setAllPermissions(availablePermissions);
   }, []);
 
   // Fetch user permissions when a user is selected
@@ -284,7 +283,7 @@ const UserManagement = () => {
             .from('user_permissions')
             .insert({
               user_id: selectedUser.id,
-              permission,
+              permission: permission,
               granted
             });
             

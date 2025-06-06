@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
+export type UserRole = 'owner' | 'manager' | 'cashier' | 'staff';
+
 export type Permission = 
   | 'dashboard_view'
   | 'transactions_view'
@@ -19,12 +21,13 @@ export type Permission =
   | 'admin_access';
 
 // Cache to prevent multiple API calls for the same user
-const permissionsCache = new Map<string, { permissions: Permission[], timestamp: number }>();
+const permissionsCache = new Map<string, { permissions: Permission[], role: UserRole, timestamp: number }>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export function usePermissions() {
   const { user } = useAuth();
   const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [role, setRole] = useState<UserRole>('staff');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,6 +44,7 @@ export function usePermissions() {
     if (cached && (now - cached.timestamp) < CACHE_DURATION) {
       console.log('Using cached permissions for user:', user.id);
       setPermissions(cached.permissions);
+      setRole(cached.role);
       setLoading(false);
       return;
     }
@@ -68,7 +72,7 @@ export function usePermissions() {
       console.log('User role:', userRole);
 
       // Define role-based permissions
-      const rolePermissions: Record<string, Permission[]> = {
+      const rolePermissions: Record<UserRole, Permission[]> = {
         owner: [
           'dashboard_view',
           'transactions_view',
@@ -96,7 +100,7 @@ export function usePermissions() {
           'reports_edit',
           'settings_view'
         ],
-        staff: [
+        cashier: [
           'dashboard_view',
           'cash_desk_access',
           'cash_desk_edit',
@@ -104,20 +108,30 @@ export function usePermissions() {
           'inventory_view',
           'reports_view',
           'settings_view'
+        ],
+        staff: [
+          'dashboard_view',
+          'cash_desk_access',
+          'transactions_view',
+          'inventory_view',
+          'reports_view',
+          'settings_view'
         ]
       };
 
-      const userPermissions = rolePermissions[userRole] || rolePermissions.staff;
+      const userPermissions = rolePermissions[userRole as UserRole] || rolePermissions.staff;
       
       console.log('Final permissions:', userPermissions);
       
       // Cache the permissions
       permissionsCache.set(user.id, {
         permissions: userPermissions,
+        role: userRole as UserRole,
         timestamp: Date.now()
       });
       
       setPermissions(userPermissions);
+      setRole(userRole as UserRole);
     } catch (err) {
       console.error('Error fetching permissions:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -130,6 +144,7 @@ export function usePermissions() {
         'inventory_view'
       ];
       setPermissions(fallbackPermissions);
+      setRole('staff');
     } finally {
       setLoading(false);
     }
@@ -149,12 +164,19 @@ export function usePermissions() {
     }
   };
 
+  // Convenience methods
+  const canEditCashDesk = hasPermission('cash_desk_edit');
+  const canViewReports = hasPermission('reports_view');
+
   return {
     permissions,
+    role,
     loading,
     error,
     hasPermission,
     hasAnyPermission,
+    canEditCashDesk,
+    canViewReports,
     refetch: fetchUserPermissions,
     clearCache
   };
