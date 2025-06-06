@@ -9,6 +9,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import DashboardPage from './pages/DashboardPage';
 import SettingsPage from './pages/SettingsPage';
 import LoginPage from './pages/LoginPage';
+import TransactionsPage from './pages/TransactionsPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import CashdeskPage from './pages/CashDeskPage';
 import ManagerOverviewPage from './pages/ManagerOverviewPage';
@@ -31,6 +32,14 @@ function App() {
                       element={
                         <ProtectedRoute>
                           <DashboardPage />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/transactions" 
+                      element={
+                        <ProtectedRoute>
+                          <TransactionsPage />
                         </ProtectedRoute>
                       } 
                     />

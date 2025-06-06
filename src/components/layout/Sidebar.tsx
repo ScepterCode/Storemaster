@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   BarChart3Icon,
@@ -46,12 +46,12 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }: SidebarProps) => {
     return location.pathname.startsWith(path);
   };
 
-  const navigationItems: SidebarNavigationItem[] = [
+  const navigationItems: SidebarNavigationItem[] = useMemo(() => [
     {
       label: 'Dashboard',
       icon: <BarChart3Icon className="h-4 w-4" />,
-      href: '/dashboard',
-      active: isActive('/dashboard'),
+      href: '/',
+      active: isActive('/'),
       permission: 'dashboard_view'
     },
     {
@@ -103,18 +103,43 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }: SidebarProps) => {
       active: isActive('/settings'),
       permission: 'settings_view'
     },
-  ];
+  ], [location.pathname]);
 
-  // Always show items that have permissions, only filter out those explicitly denied
-  const visibleItems = navigationItems.filter(item => {
-    // If no permission required, always show
-    if (!item.permission) return true;
+  // Memoize visible items to prevent recalculation on every render
+  const visibleItems = useMemo(() => {
+    if (loading) return [];
     
-    // Show item if user has permission (includes default permissions)
-    return hasPermission(item.permission as any);
-  });
+    return navigationItems.filter(item => {
+      // If no permission required, always show
+      if (!item.permission) return true;
+      
+      // Show item if user has permission
+      return hasPermission(item.permission as any);
+    });
+  }, [navigationItems, hasPermission, loading]);
 
-  console.log('Sidebar render - loading:', loading, 'visible items:', visibleItems.length, 'total items:', navigationItems.length);
+  if (loading) {
+    return (
+      <aside className={cn(
+        'fixed inset-y-0 z-20 hidden h-full flex-col border-r bg-background transition-all sm:flex print:hidden',
+        isSidebarOpen ? 'w-[240px]' : 'w-[70px]'
+      )}>
+        <div className="flex h-14 items-center border-b px-3">
+          <CreditCardIcon className="h-6 w-6 text-primary" />
+          {isSidebarOpen && (
+            <span className="ml-2 font-semibold">Business Manager</span>
+          )}
+        </div>
+        <div className="flex-1 p-4">
+          <div className="animate-pulse space-y-2">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-10 bg-muted rounded" />
+            ))}
+          </div>
+        </div>
+      </aside>
+    );
+  }
 
   return (
     <aside
