@@ -11,6 +11,9 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { UserRole, Permission } from '@/hooks/usePermissions';
 import { UserPlus, Save } from 'lucide-react';
+import { Database } from '@/integrations/supabase/types';
+
+type DatabasePermission = Database['public']['Enums']['permission_type'];
 
 const AVAILABLE_PERMISSIONS: { permission: Permission; label: string; description: string }[] = [
   { permission: 'dashboard_view', label: 'Dashboard View', description: 'View dashboard and analytics' },
@@ -83,12 +86,12 @@ const EmployeeManagement = () => {
 
       if (roleError) throw roleError;
 
-      // Set custom permissions if any
+      // Set custom permissions if any - filter and cast to database types
       const permissionsToSet = Object.entries(customPermissions)
         .filter(([_, granted]) => granted)
         .map(([permission]) => ({
           user_id: userData.user.id,
-          permission: permission,
+          permission: permission as DatabasePermission,
           granted: true,
         }));
 

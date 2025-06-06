@@ -21,6 +21,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { PlusIcon, Trash2Icon, UserCog, UserIcon } from 'lucide-react';
+import { Database } from '@/integrations/supabase/types';
+
+type DatabasePermission = Database['public']['Enums']['permission_type'];
 
 interface UserWithRole {
   id: string;
@@ -242,7 +245,7 @@ const UserManagement = () => {
         .from('role_permissions')
         .select('permission')
         .eq('role', selectedUser.role)
-        .eq('permission', permission);
+        .eq('permission', permission as DatabasePermission);
         
       if (rolePermError) throw rolePermError;
       
@@ -255,7 +258,7 @@ const UserManagement = () => {
           .from('user_permissions')
           .delete()
           .eq('user_id', selectedUser.id)
-          .eq('permission', permission);
+          .eq('permission', permission as DatabasePermission);
           
         if (deleteError) throw deleteError;
       } else {
@@ -265,7 +268,7 @@ const UserManagement = () => {
           .from('user_permissions')
           .select('id')
           .eq('user_id', selectedUser.id)
-          .eq('permission', permission);
+          .eq('permission', permission as DatabasePermission);
           
         if (existingError) throw existingError;
         
@@ -283,7 +286,7 @@ const UserManagement = () => {
             .from('user_permissions')
             .insert({
               user_id: selectedUser.id,
-              permission: permission,
+              permission: permission as DatabasePermission,
               granted
             });
             

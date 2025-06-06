@@ -414,6 +414,8 @@ export type Database = {
         | "settings_view"
         | "settings_edit"
         | "user_management"
+        | "reports_edit"
+        | "admin_access"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -542,6 +544,8 @@ export const Constants = {
         "settings_view",
         "settings_edit",
         "user_management",
+        "reports_edit",
+        "admin_access",
       ],
     },
   },
