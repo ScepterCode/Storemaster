@@ -10,6 +10,9 @@ import DashboardPage from './pages/DashboardPage';
 import SettingsPage from './pages/SettingsPage';
 import LoginPage from './pages/LoginPage';
 import TransactionsPage from './pages/TransactionsPage';
+import InventoryPage from './pages/InventoryPage';
+import InventoryViewPage from './pages/InventoryViewPage';
+import StockPage from './pages/StockPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import CashdeskPage from './pages/CashDeskPage';
 import ManagerOverviewPage from './pages/ManagerOverviewPage';
@@ -32,6 +35,30 @@ function App() {
                       element={
                         <ProtectedRoute>
                           <DashboardPage />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/inventory" 
+                      element={
+                        <ProtectedRoute>
+                          <InventoryPage />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/inventory/view" 
+                      element={
+                        <ProtectedRoute>
+                          <InventoryViewPage />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/stock" 
+                      element={
+                        <ProtectedRoute>
+                          <StockPage />
                         </ProtectedRoute>
                       } 
                     />
