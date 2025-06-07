@@ -1,59 +1,61 @@
 
 import React from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { UserIcon, Trash2Icon } from 'lucide-react';
-import { UserRole, Permission } from '@/hooks/usePermissions';
+import { Badge } from '@/components/ui/badge';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { UserWithRole, RolePermission } from '@/types/userManagement';
+import { UserRole, Permission } from '@/hooks/usePermissions';
+import { Trash2 } from 'lucide-react';
 
 interface EditUserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedUser: UserWithRole | null;
-  userPermissions: Record<Permission, boolean>;
+  userPermissions: Permission[];
   allPermissions: RolePermission[];
   onUpdateUserRole: (userId: string, role: UserRole) => void;
-  onUpdatePermission: (permission: Permission, granted: boolean) => void;
+  onUpdatePermission: (permission: Permission, enabled: boolean) => void;
   onDeleteUser: (userId: string) => void;
 }
 
-const EditUserDialog = ({ 
-  open, 
-  onOpenChange, 
-  selectedUser, 
-  userPermissions, 
+const EditUserDialog: React.FC<EditUserDialogProps> = ({
+  open,
+  onOpenChange,
+  selectedUser,
+  userPermissions,
   allPermissions,
   onUpdateUserRole,
   onUpdatePermission,
   onDeleteUser
-}: EditUserDialogProps) => {
+}) => {
   if (!selectedUser) return null;
+
+  const handleRoleChange = (newRole: UserRole) => {
+    onUpdateUserRole(selectedUser.id, newRole);
+  };
+
+  const handleDeleteUser = () => {
+    onDeleteUser(selectedUser.id);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center">
-            <UserIcon className="mr-2 h-5 w-5" />
-            {selectedUser.email}
-          </DialogTitle>
-          <DialogDescription>
-            Manage user role and permissions
-          </DialogDescription>
+          <DialogTitle>Manage User: {selectedUser.email}</DialogTitle>
         </DialogHeader>
-        
-        <div className="grid gap-6 py-4">
-          <div className="grid gap-2">
-            <Label>User Role</Label>
+
+        <div className="space-y-6">
+          <div>
+            <label className="text-sm font-medium">Role</label>
             <Select
               value={selectedUser.role}
-              onValueChange={(value) => onUpdateUserRole(selectedUser.id, value as UserRole)}
+              onValueChange={handleRoleChange}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select role" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="staff">Staff</SelectItem>
@@ -62,44 +64,52 @@ const EditUserDialog = ({
                 <SelectItem value="owner">Owner</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-sm text-muted-foreground">
-              Changing the role will reset and update all permissions.
-            </p>
           </div>
-          
-          <div className="border-t pt-4">
-            <h4 className="font-medium mb-2">Permissions</h4>
-            <div className="space-y-4">
-              {allPermissions.map((p) => (
-                <div key={p.permission} className="flex items-center justify-between">
+
+          <div>
+            <label className="text-sm font-medium">Permissions</label>
+            <div className="space-y-2 mt-2">
+              {allPermissions.map((perm) => (
+                <div key={perm.permission} className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium">{p.permission.replace(/_/g, ' ')}</p>
-                    <p className="text-sm text-muted-foreground">{p.description}</p>
+                    <div className="text-sm">{perm.permission.replace('_', ' ')}</div>
+                    <div className="text-xs text-muted-foreground">{perm.description}</div>
                   </div>
-                  <Switch
-                    checked={userPermissions[p.permission] || false}
-                    onCheckedChange={(checked) => onUpdatePermission(p.permission, checked)}
-                  />
+                  <Badge variant={userPermissions.includes(perm.permission) ? "default" : "secondary"}>
+                    {userPermissions.includes(perm.permission) ? "Enabled" : "Disabled"}
+                  </Badge>
                 </div>
               ))}
             </div>
           </div>
+
+          <div className="flex justify-between">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete User
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete User</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete {selectedUser.email}? This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteUser}>Delete</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
+            <Button onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
+          </div>
         </div>
-        
-        <DialogFooter className="flex items-center justify-between">
-          <Button
-            variant="destructive"
-            onClick={() => onDeleteUser(selectedUser.id)}
-            className="mr-auto"
-          >
-            <Trash2Icon className="h-4 w-4 mr-2" />
-            Delete User
-          </Button>
-          
-          <Button onClick={() => onOpenChange(false)}>
-            Done
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

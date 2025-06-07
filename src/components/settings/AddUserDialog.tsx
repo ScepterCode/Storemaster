@@ -1,12 +1,12 @@
 
 import React from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { UserRole } from '@/hooks/usePermissions';
 import { NewUserForm } from '@/types/userManagement';
+import { UserRole } from '@/hooks/usePermissions';
 
 interface AddUserDialogProps {
   open: boolean;
@@ -16,52 +16,58 @@ interface AddUserDialogProps {
   onAddUser: () => void;
 }
 
-const AddUserDialog = ({ open, onOpenChange, newUser, onNewUserChange, onAddUser }: AddUserDialogProps) => {
+const AddUserDialog: React.FC<AddUserDialogProps> = ({
+  open,
+  onOpenChange,
+  newUser,
+  onNewUserChange,
+  onAddUser
+}) => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onAddUser();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Add New User</DialogTitle>
-          <DialogDescription>
-            Create a new staff account with specific permissions.
-          </DialogDescription>
         </DialogHeader>
         
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="email" className="text-right">
-              Email
-            </Label>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
               value={newUser.email}
-              onChange={(e) => onNewUserChange({...newUser, email: e.target.value})}
-              className="col-span-3"
+              onChange={(e) => onNewUserChange({ ...newUser, email: e.target.value })}
+              placeholder="user@example.com"
+              required
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="password" className="text-right">
-              Password
-            </Label>
+
+          <div>
+            <Label htmlFor="password">Password</Label>
             <Input
               id="password"
               type="password"
               value={newUser.password}
-              onChange={(e) => onNewUserChange({...newUser, password: e.target.value})}
-              className="col-span-3"
+              onChange={(e) => onNewUserChange({ ...newUser, password: e.target.value })}
+              placeholder="Enter password"
+              required
             />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="role" className="text-right">
-              Role
-            </Label>
+
+          <div>
+            <Label htmlFor="role">Role</Label>
             <Select
               value={newUser.role}
-              onValueChange={(value) => onNewUserChange({...newUser, role: value as UserRole})}
+              onValueChange={(value: UserRole) => onNewUserChange({ ...newUser, role: value })}
             >
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Select role" />
+              <SelectTrigger>
+                <SelectValue placeholder="Select a role" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="staff">Staff</SelectItem>
@@ -71,16 +77,14 @@ const AddUserDialog = ({ open, onOpenChange, newUser, onNewUserChange, onAddUser
               </SelectContent>
             </Select>
           </div>
-        </div>
-        
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={onAddUser}>
-            Create User
-          </Button>
-        </DialogFooter>
+
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Add User</Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

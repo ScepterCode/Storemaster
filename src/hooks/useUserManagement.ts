@@ -1,274 +1,194 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { UserWithRole, NewUserForm, RolePermission } from '@/types/userManagement';
 import { UserRole, Permission } from '@/hooks/usePermissions';
-import { UserWithRole, RolePermission, NewUserForm } from '@/types/userManagement';
-import { Database } from '@/integrations/supabase/types';
-
-type DatabasePermission = Database['public']['Enums']['permission_type'];
+import { getStoredItems, storeItem, STORAGE_KEYS } from '@/lib/offlineStorage';
+import { useToast } from '@/hooks/use-toast';
 
 export const useUserManagement = () => {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
-  const [newUser, setNewUser] = useState<NewUserForm>({ email: '', password: '', role: 'staff' });
-  const [userPermissions, setUserPermissions] = useState<Record<Permission, boolean>>({} as Record<Permission, boolean>);
+  const [newUser, setNewUser] = useState<NewUserForm>({
+    email: '',
+    password: '',
+    role: 'staff'
+  });
+  const [userPermissions, setUserPermissions] = useState<Permission[]>([]);
+  const { toast } = useToast();
 
-  // Define all available permissions
   const availablePermissions: RolePermission[] = [
     { permission: 'dashboard_view', description: 'View dashboard and analytics' },
+    { permission: 'inventory_manage', description: 'Add, edit, and delete inventory items' },
+    { permission: 'inventory_view', description: 'View inventory and stock levels' },
+    { permission: 'transactions_manage', description: 'Create and edit transactions' },
     { permission: 'transactions_view', description: 'View transaction history' },
-    { permission: 'transactions_edit', description: 'Modify transaction records' },
-    { permission: 'cash_desk_access', description: 'Access the point of sale system' },
-    { permission: 'cash_desk_edit', description: 'Modify cash desk transactions' },
-    { permission: 'inventory_view', description: 'View products and stock levels' },
-    { permission: 'inventory_edit', description: 'Add, edit, and delete products' },
-    { permission: 'reports_view', description: 'Access business reports and analytics' },
-    { permission: 'reports_edit', description: 'Modify and create reports' },
-    { permission: 'settings_view', description: 'Access application settings' },
-    { permission: 'settings_edit', description: 'Modify application configuration' },
-    { permission: 'user_management', description: 'Manage staff accounts and permissions' },
-    { permission: 'admin_access', description: 'Full administrative access' },
+    { permission: 'cash_desk_access', description: 'Access point of sale system' },
+    { permission: 'reports_view', description: 'View business reports' },
+    { permission: 'settings_manage', description: 'Manage system settings' },
+    { permission: 'settings_view', description: 'View system settings' },
+    { permission: 'user_management', description: 'Manage user accounts and permissions' }
   ];
 
-  // Fetch users with their roles
-  const fetchUsers = async () => {
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  useEffect(() => {
+    if (selectedUser) {
+      loadUserPermissions(selectedUser.role);
+    }
+  }, [selectedUser]);
+
+  const loadUsers = () => {
     try {
-      setLoading(true);
-      
-      const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
-      
-      if (userError) {
-        console.error('Error fetching users:', userError);
-        toast.error('Failed to load users');
-        return;
-      }
-
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
-        
-      if (roleError) {
-        console.error('Error fetching roles:', roleError);
-        toast.error('Failed to load user roles');
-        return;
-      }
-
-      const usersWithRoles = userData.users.map(u => {
-        const userRole = roleData.find(r => r.user_id === u.id);
-        return {
-          id: u.id,
-          email: u.email || '',
-          role: (userRole?.role || 'staff') as UserRole,
-          created_at: u.created_at
-        };
-      });
-      
-      setUsers(usersWithRoles);
+      const storedUsers = getStoredItems<UserWithRole>(STORAGE_KEYS.USERS) || [];
+      setUsers(storedUsers);
     } catch (error) {
-      console.error('Error in fetchUsers:', error);
-      toast.error('Failed to load users');
+      console.error('Error loading users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load users",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch user permissions when a user is selected
-  const fetchUserPermissions = async (user: UserWithRole) => {
-    try {
-      const { data: rolePermissions, error: roleError } = await supabase
-        .from('role_permissions')
-        .select('permission')
-        .eq('role', user.role);
-        
-      if (roleError) throw roleError;
-      
-      const { data: userPerms, error: userError } = await supabase
-        .from('user_permissions')
-        .select('permission, granted')
-        .eq('user_id', user.id);
-        
-      if (userError) throw userError;
-      
-      const permObj = {} as Record<Permission, boolean>;
-      
-      rolePermissions.forEach(rp => {
-        permObj[rp.permission as Permission] = true;
-      });
-      
-      userPerms.forEach(up => {
-        permObj[up.permission as Permission] = up.granted;
-      });
-      
-      setUserPermissions(permObj);
-    } catch (error) {
-      console.error('Error fetching user permissions:', error);
-      toast.error('Failed to load user permissions');
-    }
+  const loadUserPermissions = (role: UserRole) => {
+    const rolePermissions: Record<UserRole, Permission[]> = {
+      'owner': [
+        'dashboard_view', 'inventory_manage', 'inventory_view', 
+        'transactions_manage', 'transactions_view', 'cash_desk_access',
+        'reports_view', 'settings_manage', 'settings_view', 'user_management'
+      ],
+      'manager': [
+        'dashboard_view', 'inventory_manage', 'inventory_view',
+        'transactions_view', 'cash_desk_access', 'reports_view',
+        'settings_view'
+      ],
+      'cashier': [
+        'dashboard_view', 'cash_desk_access', 'transactions_view',
+        'inventory_view', 'reports_view', 'settings_view'
+      ],
+      'staff': [
+        'dashboard_view', 'cash_desk_access', 'transactions_view',
+        'inventory_view', 'reports_view', 'settings_view'
+      ]
+    };
+
+    setUserPermissions(rolePermissions[role] || []);
   };
 
   const handleAddUser = async () => {
     try {
       if (!newUser.email || !newUser.password) {
-        toast.error('Email and password are required');
-        return;
+        toast({
+          title: "Error",
+          description: "Email and password are required",
+          variant: "destructive"
+        });
+        return false;
       }
 
-      const { data, error } = await supabase.auth.admin.createUser({
+      const existingUsers = getStoredItems<UserWithRole>(STORAGE_KEYS.USERS) || [];
+      const emailExists = existingUsers.some(user => user.email === newUser.email);
+      
+      if (emailExists) {
+        toast({
+          title: "Error",
+          description: "User with this email already exists",
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      const user: UserWithRole = {
+        id: crypto.randomUUID(),
         email: newUser.email,
-        password: newUser.password,
-        email_confirm: true
-      });
-      
-      if (error) throw error;
-
-      if (newUser.role !== 'staff') {
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .update({ role: newUser.role })
-          .eq('user_id', data.user.id);
-          
-        if (roleError) throw roleError;
-      }
-
-      toast.success('User created successfully');
-      
-      setUsers([...users, {
-        id: data.user.id,
-        email: data.user.email || '',
         role: newUser.role,
-        created_at: data.user.created_at
-      }]);
+        created_at: new Date().toISOString()
+      };
+
+      const updatedUsers = [...existingUsers, user];
+      storeItem(STORAGE_KEYS.USERS, updatedUsers);
+      setUsers(updatedUsers);
       
       setNewUser({ email: '', password: '', role: 'staff' });
       
+      toast({
+        title: "Success",
+        description: "User added successfully"
+      });
+      
+      return true;
     } catch (error) {
-      console.error('Error creating user:', error);
-      toast.error('Failed to create user');
+      console.error('Error adding user:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add user",
+        variant: "destructive"
+      });
+      return false;
     }
   };
 
   const handleUpdateUserRole = async (userId: string, role: UserRole) => {
     try {
-      const { error } = await supabase
-        .from('user_roles')
-        .update({ role })
-        .eq('user_id', userId);
-        
-      if (error) throw error;
-
-      setUsers(users.map(u => 
-        u.id === userId ? { ...u, role } : u
-      ));
+      const existingUsers = getStoredItems<UserWithRole>(STORAGE_KEYS.USERS) || [];
+      const updatedUsers = existingUsers.map(user =>
+        user.id === userId ? { ...user, role } : user
+      );
       
-      if (selectedUser?.id === userId) {
-        const updatedUser = { ...selectedUser, role };
-        setSelectedUser(updatedUser);
-        fetchUserPermissions(updatedUser);
+      storeItem(STORAGE_KEYS.USERS, updatedUsers);
+      setUsers(updatedUsers);
+      
+      if (selectedUser && selectedUser.id === userId) {
+        setSelectedUser({ ...selectedUser, role });
       }
       
-      toast.success('User role updated');
+      toast({
+        title: "Success",
+        description: "User role updated successfully"
+      });
     } catch (error) {
       console.error('Error updating user role:', error);
-      toast.error('Failed to update user role');
+      toast({
+        title: "Error",
+        description: "Failed to update user role",
+        variant: "destructive"
+      });
     }
   };
 
-  const handleUpdatePermission = async (permission: Permission, granted: boolean) => {
-    if (!selectedUser) return;
-    
-    try {
-      const { data: rolePermData, error: rolePermError } = await supabase
-        .from('role_permissions')
-        .select('permission')
-        .eq('role', selectedUser.role)
-        .eq('permission', permission as DatabasePermission);
-        
-      if (rolePermError) throw rolePermError;
-      
-      const isDefaultForRole = rolePermData.length > 0;
-      
-      if ((isDefaultForRole && granted) || (!isDefaultForRole && !granted)) {
-        const { error: deleteError } = await supabase
-          .from('user_permissions')
-          .delete()
-          .eq('user_id', selectedUser.id)
-          .eq('permission', permission as DatabasePermission);
-          
-        if (deleteError) throw deleteError;
-      } else {
-        const { data: existingPerm, error: existingError } = await supabase
-          .from('user_permissions')
-          .select('id')
-          .eq('user_id', selectedUser.id)
-          .eq('permission', permission as DatabasePermission);
-          
-        if (existingError) throw existingError;
-        
-        if (existingPerm.length > 0) {
-          const { error: updateError } = await supabase
-            .from('user_permissions')
-            .update({ granted })
-            .eq('id', existingPerm[0].id);
-            
-          if (updateError) throw updateError;
-        } else {
-          const { error: insertError } = await supabase
-            .from('user_permissions')
-            .insert({
-              user_id: selectedUser.id,
-              permission: permission as DatabasePermission,
-              granted
-            });
-            
-          if (insertError) throw insertError;
-        }
-      }
-      
-      setUserPermissions({
-        ...userPermissions,
-        [permission]: granted
-      });
-      
-      toast.success('Permission updated');
-    } catch (error) {
-      console.error('Error updating permission:', error);
-      toast.error('Failed to update permission');
-    }
+  const handleUpdatePermission = async (permission: Permission, enabled: boolean) => {
+    // This would typically update individual permissions
+    // For now, permissions are role-based
+    console.log('Permission update:', permission, enabled);
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-      return;
-    }
-    
     try {
-      const { error } = await supabase.auth.admin.deleteUser(userId);
-      if (error) throw error;
+      const existingUsers = getStoredItems<UserWithRole>(STORAGE_KEYS.USERS) || [];
+      const updatedUsers = existingUsers.filter(user => user.id !== userId);
       
-      setUsers(users.filter(u => u.id !== userId));
+      storeItem(STORAGE_KEYS.USERS, updatedUsers);
+      setUsers(updatedUsers);
       
-      if (selectedUser?.id === userId) {
-        setSelectedUser(null);
-      }
-      
-      toast.success('User deleted successfully');
+      toast({
+        title: "Success",
+        description: "User deleted successfully"
+      });
     } catch (error) {
       console.error('Error deleting user:', error);
-      toast.error('Failed to delete user');
+      toast({
+        title: "Error",
+        description: "Failed to delete user",
+        variant: "destructive"
+      });
     }
   };
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  useEffect(() => {
-    if (selectedUser) {
-      fetchUserPermissions(selectedUser);
-    }
-  }, [selectedUser]);
 
   return {
     users,
@@ -282,6 +202,6 @@ export const useUserManagement = () => {
     handleAddUser,
     handleUpdateUserRole,
     handleUpdatePermission,
-    handleDeleteUser,
+    handleDeleteUser
   };
 };
