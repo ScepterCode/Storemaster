@@ -123,7 +123,7 @@ const ReportsExport = () => {
             <Label>Export Format</Label>
             <Select value={format} onValueChange={setFormat}>
               <SelectTrigger className="w-48">
-                <SelectValue />
+                <SelectValue placeholder="Select format" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="csv">CSV (Excel)</SelectItem>
@@ -161,7 +161,7 @@ const ReportsExport = () => {
               <Label>Specific Cashiers (optional)</Label>
               <Select value={selectedCashier} onValueChange={setSelectedCashier}>
                 <SelectTrigger>
-                  <SelectValue placeholder="All cashiers" />
+                  <SelectValue placeholder="Select cashier" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all_cashiers">All Cashiers</SelectItem>
