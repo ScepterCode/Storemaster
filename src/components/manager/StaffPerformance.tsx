@@ -11,19 +11,43 @@ import { useManagerData } from '@/hooks/useManagerData';
 import { formatCurrency } from '@/lib/formatter';
 
 const StaffPerformance = () => {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    return new Date().toISOString().split('T')[0];
+  });
   const { staffPerformance, loading } = useManagerData();
 
   console.log('StaffPerformance render - selectedDate:', selectedDate, 'loading:', loading);
 
-  // Calculate dates
-  const today = new Date().toISOString().split('T')[0];
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  // Calculate available dates from performance data
+  const availableDates = React.useMemo(() => {
+    if (!staffPerformance || !Array.isArray(staffPerformance)) {
+      return [];
+    }
+    
+    const dates = Array.from(new Set(
+      staffPerformance
+        .map(p => p.date)
+        .filter(date => date && date.trim() !== '')
+    )).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    
+    return dates;
+  }, [staffPerformance]);
 
-  const todayPerformance = staffPerformance.filter(p => p.date === selectedDate);
-  const bestPerformer = todayPerformance.reduce((best, current) => 
-    current.totalSales > (best?.totalSales || 0) ? current : best, null as CashierPerformance | null
-  );
+  // Filter performance data by selected date
+  const todayPerformance = React.useMemo(() => {
+    if (!staffPerformance || !Array.isArray(staffPerformance)) {
+      return [];
+    }
+    
+    return staffPerformance.filter(p => p.date === selectedDate);
+  }, [staffPerformance, selectedDate]);
+
+  const bestPerformer = React.useMemo(() => {
+    return todayPerformance.reduce((best, current) => 
+      current.totalSales > (best?.totalSales || 0) ? current : best, 
+      null as CashierPerformance | null
+    );
+  }, [todayPerformance]);
 
   if (loading) {
     return (
@@ -54,8 +78,17 @@ const StaffPerformance = () => {
                 <SelectValue placeholder="Select date" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={today}>Today</SelectItem>
-                <SelectItem value={yesterday}>Yesterday</SelectItem>
+                {availableDates.length > 0 ? (
+                  availableDates.map(date => (
+                    <SelectItem key={date} value={date}>
+                      {new Date(date).toLocaleDateString()}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="no-data" disabled>
+                    No performance data available
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -68,7 +101,7 @@ const StaffPerformance = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
-              Top Performer - {selectedDate}
+              Top Performer - {new Date(selectedDate).toLocaleDateString()}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -96,13 +129,13 @@ const StaffPerformance = () => {
           <Card className="lg:col-span-2">
             <CardContent className="text-center py-8">
               <div className="text-muted-foreground">
-                No performance data available for {selectedDate}
+                No performance data available for {new Date(selectedDate).toLocaleDateString()}
               </div>
             </CardContent>
           </Card>
         ) : (
           todayPerformance.map((performance) => (
-            <Card key={performance.cashierId}>
+            <Card key={`${performance.cashierId}-${performance.date}`}>
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">{performance.cashierName}</CardTitle>
@@ -177,7 +210,7 @@ const StaffPerformance = () => {
                 )}
 
                 {/* Top Products */}
-                {performance.topSellingProducts.length > 0 && (
+                {performance.topSellingProducts && performance.topSellingProducts.length > 0 && (
                   <div>
                     <h4 className="text-sm font-medium mb-2">Top Products Sold</h4>
                     <div className="space-y-1">

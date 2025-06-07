@@ -58,8 +58,8 @@ export const useManagerData = () => {
           allSales.push(...sales.map((sale: any) => ({
             id: sale.id,
             transactionId: sale.transactionId,
-            cashierId: sale.cashierId,
-            cashierName: sale.cashierName,
+            cashierId: sale.cashierId || 'unknown',
+            cashierName: sale.cashierName || 'Unknown Cashier',
             timestamp: sale.timestamp,
             items: sale.items,
             subtotal: sale.subtotal,
@@ -88,38 +88,45 @@ export const useManagerData = () => {
 
   const generateStaffPerformance = (transactions: StaffTransaction[]): CashierPerformance[] => {
     const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
     const cashierMap = new Map<string, CashierPerformance>();
     
-    // Filter today's transactions
-    const todayTransactions = transactions.filter(t => 
-      new Date(t.timestamp).toISOString().split('T')[0] === today
-    );
-    
-    todayTransactions.forEach(transaction => {
-      const key = transaction.cashierId;
+    // Process transactions for both today and yesterday
+    [today, yesterday].forEach(date => {
+      const dayTransactions = transactions.filter(t => 
+        new Date(t.timestamp).toISOString().split('T')[0] === date &&
+        t.cashierId &&
+        t.cashierId !== 'unknown' &&
+        t.cashierName &&
+        t.cashierName !== 'Unknown Cashier'
+      );
       
-      if (!cashierMap.has(key)) {
-        cashierMap.set(key, {
-          cashierId: transaction.cashierId,
-          cashierName: transaction.cashierName,
-          date: today,
-          totalSales: 0,
-          transactionCount: 0,
-          averageTransactionValue: 0,
-          refundsIssued: 0,
-          voidsIssued: 0,
-          cashDiscrepancy: 0,
-          hoursWorked: 8, // Default, could be calculated from session data
-          topSellingProducts: []
-        });
-      }
-      
-      const performance = cashierMap.get(key)!;
-      performance.totalSales += transaction.total;
-      performance.transactionCount += 1;
-      
-      if (transaction.refunded) performance.refundsIssued += 1;
-      if (transaction.voided) performance.voidsIssued += 1;
+      dayTransactions.forEach(transaction => {
+        const key = `${transaction.cashierId}-${date}`;
+        
+        if (!cashierMap.has(key)) {
+          cashierMap.set(key, {
+            cashierId: transaction.cashierId,
+            cashierName: transaction.cashierName,
+            date: date,
+            totalSales: 0,
+            transactionCount: 0,
+            averageTransactionValue: 0,
+            refundsIssued: 0,
+            voidsIssued: 0,
+            cashDiscrepancy: 0,
+            hoursWorked: 8, // Default, could be calculated from session data
+            topSellingProducts: []
+          });
+        }
+        
+        const performance = cashierMap.get(key)!;
+        performance.totalSales += transaction.total;
+        performance.transactionCount += 1;
+        
+        if (transaction.refunded) performance.refundsIssued += 1;
+        if (transaction.voided) performance.voidsIssued += 1;
+      });
     });
     
     // Calculate averages and finalize data

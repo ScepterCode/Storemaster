@@ -11,21 +11,34 @@ const SalesAnalytics = () => {
   const [dateRange, setDateRange] = useState('today');
   const { salesAnalytics, loading } = useManagerData();
 
-  console.log('SalesAnalytics render - dateRange:', dateRange, 'loading:', loading);
+  console.log('SalesAnalytics render - dateRange:', dateRange, 'loading:', loading, 'analytics:', salesAnalytics);
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
-  const hourlyData = salesAnalytics?.peakHours?.map(hour => ({
-    hour: `${hour.hour}:00`,
-    transactions: hour.transactionCount,
-    revenue: hour.revenue
-  })) || [];
+  const hourlyData = React.useMemo(() => {
+    return salesAnalytics?.peakHours?.map(hour => ({
+      hour: `${hour.hour}:00`,
+      transactions: hour.transactionCount,
+      revenue: hour.revenue
+    })) || [];
+  }, [salesAnalytics]);
 
-  const paymentData = Object.entries(salesAnalytics?.paymentMethodBreakdown || {}).map(([method, amount]) => ({
-    name: method.charAt(0).toUpperCase() + method.slice(1),
-    value: amount,
-    percentage: ((amount / (salesAnalytics?.totalRevenue || 1)) * 100).toFixed(1)
-  }));
+  const paymentData = React.useMemo(() => {
+    if (!salesAnalytics?.paymentMethodBreakdown) return [];
+    
+    return Object.entries(salesAnalytics.paymentMethodBreakdown).map(([method, amount]) => ({
+      name: method.charAt(0).toUpperCase() + method.slice(1),
+      value: amount,
+      percentage: ((amount / (salesAnalytics?.totalRevenue || 1)) * 100).toFixed(1)
+    }));
+  }, [salesAnalytics]);
+
+  const dateRangeOptions = [
+    { value: 'today', label: 'Today' },
+    { value: 'yesterday', label: 'Yesterday' },
+    { value: 'week', label: 'This Week' },
+    { value: 'month', label: 'This Month' }
+  ];
 
   if (loading) {
     return (
@@ -52,10 +65,11 @@ const SalesAnalytics = () => {
               <SelectValue placeholder="Select date range" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="yesterday">Yesterday</SelectItem>
-              <SelectItem value="week">This Week</SelectItem>
-              <SelectItem value="month">This Month</SelectItem>
+              {dateRangeOptions.map(option => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </CardContent>

@@ -27,7 +27,8 @@ const ReportsExport = () => {
     reportType,
     format,
     selectedCashier,
-    loading
+    loading,
+    staffPerformanceCount: staffPerformance?.length || 0
   });
 
   const handleGenerateReport = async () => {
@@ -78,11 +79,27 @@ const ReportsExport = () => {
     { value: 'product-sales', label: 'Product Sales Analysis', icon: Table },
   ];
 
-  // Get unique cashiers from staff performance data
-  const availableCashiers = staffPerformance ? 
-    Array.from(new Set(staffPerformance.map(p => ({ id: p.cashierId, name: p.cashierName }))))
-    .filter(cashier => cashier.id && cashier.name) // Ensure no empty values
-    : [];
+  // Get unique cashiers from staff performance data with proper validation
+  const availableCashiers = React.useMemo(() => {
+    if (!staffPerformance || !Array.isArray(staffPerformance)) {
+      return [];
+    }
+    
+    const uniqueCashiers = new Map();
+    
+    staffPerformance.forEach(p => {
+      if (p.cashierId && p.cashierName && 
+          p.cashierId.trim() !== '' && p.cashierName.trim() !== '' &&
+          p.cashierId !== 'unknown' && p.cashierName !== 'Unknown Cashier') {
+        uniqueCashiers.set(p.cashierId, {
+          id: p.cashierId,
+          name: p.cashierName
+        });
+      }
+    });
+    
+    return Array.from(uniqueCashiers.values());
+  }, [staffPerformance]);
 
   if (loading) {
     return (
