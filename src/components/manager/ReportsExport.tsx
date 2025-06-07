@@ -17,7 +17,6 @@ const ReportsExport = () => {
   const [format, setFormat] = useState('csv');
   const [includeVoided, setIncludeVoided] = useState(false);
   const [includeRefunded, setIncludeRefunded] = useState(true);
-  const [selectedCashiers, setSelectedCashiers] = useState<string[]>([]);
   const [selectedCashier, setSelectedCashier] = useState('all_cashiers');
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -44,7 +43,7 @@ const ReportsExport = () => {
         filters: {
           includeVoided,
           includeRefunded,
-          cashierIds: selectedCashiers
+          cashierIds: selectedCashier === 'all_cashiers' ? [] : [selectedCashier]
         }
       };
 
