@@ -19,13 +19,13 @@ export const useUserManagement = () => {
 
   const availablePermissions: RolePermission[] = [
     { permission: 'dashboard_view', description: 'View dashboard and analytics' },
-    { permission: 'inventory_manage', description: 'Add, edit, and delete inventory items' },
+    { permission: 'inventory_edit', description: 'Add, edit, and delete inventory items' },
     { permission: 'inventory_view', description: 'View inventory and stock levels' },
-    { permission: 'transactions_manage', description: 'Create and edit transactions' },
+    { permission: 'transactions_edit', description: 'Create and edit transactions' },
     { permission: 'transactions_view', description: 'View transaction history' },
     { permission: 'cash_desk_access', description: 'Access point of sale system' },
     { permission: 'reports_view', description: 'View business reports' },
-    { permission: 'settings_manage', description: 'Manage system settings' },
+    { permission: 'settings_edit', description: 'Manage system settings' },
     { permission: 'settings_view', description: 'View system settings' },
     { permission: 'user_management', description: 'Manage user accounts and permissions' }
   ];
@@ -59,12 +59,12 @@ export const useUserManagement = () => {
   const loadUserPermissions = (role: UserRole) => {
     const rolePermissions: Record<UserRole, Permission[]> = {
       'owner': [
-        'dashboard_view', 'inventory_manage', 'inventory_view', 
-        'transactions_manage', 'transactions_view', 'cash_desk_access',
-        'reports_view', 'settings_manage', 'settings_view', 'user_management'
+        'dashboard_view', 'inventory_edit', 'inventory_view', 
+        'transactions_edit', 'transactions_view', 'cash_desk_access',
+        'reports_view', 'settings_edit', 'settings_view', 'user_management'
       ],
       'manager': [
-        'dashboard_view', 'inventory_manage', 'inventory_view',
+        'dashboard_view', 'inventory_edit', 'inventory_view',
         'transactions_view', 'cash_desk_access', 'reports_view',
         'settings_view'
       ],

@@ -24,6 +24,17 @@ export function storeItems<T>(key: string, items: T[]): void {
 }
 
 /**
+ * Stores a single item or array in localStorage
+ */
+export function storeItem<T>(key: string, item: T): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(item));
+  } catch (error) {
+    console.error(`Error storing ${key} in local storage:`, error);
+  }
+}
+
+/**
  * Adds an item to localStorage
  */
 export function addItem<T>(key: string, item: T): void {
@@ -61,4 +72,5 @@ export const STORAGE_KEYS = {
   INVOICES: 'offline_invoices',
   CATEGORIES: 'offline_categories',
   USER_PREFERENCES: 'user_preferences',
+  USERS: 'offline_users',
 };
