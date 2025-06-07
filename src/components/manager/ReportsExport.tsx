@@ -18,6 +18,7 @@ const ReportsExport = () => {
   const [includeVoided, setIncludeVoided] = useState(false);
   const [includeRefunded, setIncludeRefunded] = useState(true);
   const [selectedCashiers, setSelectedCashiers] = useState<string[]>([]);
+  const [selectedCashier, setSelectedCashier] = useState('all_cashiers');
   const [isGenerating, setIsGenerating] = useState(false);
 
   const { generateReport } = useManagerData();
@@ -159,14 +160,14 @@ const ReportsExport = () => {
 
             <div className="space-y-2">
               <Label>Specific Cashiers (optional)</Label>
-              <Select value="all_cashiers" onValueChange={() => {}}>
+              <Select value={selectedCashier} onValueChange={setSelectedCashier}>
                 <SelectTrigger>
                   <SelectValue placeholder="All cashiers" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all_cashiers">All Cashiers</SelectItem>
-                  <SelectItem value="cashier_1">John Doe</SelectItem>
-                  <SelectItem value="cashier_2">Jane Smith</SelectItem>
+                  <SelectItem value="john_doe">John Doe</SelectItem>
+                  <SelectItem value="jane_smith">Jane Smith</SelectItem>
                 </SelectContent>
               </Select>
             </div>
