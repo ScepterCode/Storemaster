@@ -14,16 +14,28 @@ const StaffPerformance = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const { staffPerformance, loading } = useManagerData();
 
-  console.log('StaffPerformance render - selectedDate:', selectedDate);
+  console.log('StaffPerformance render - selectedDate:', selectedDate, 'loading:', loading);
+
+  // Calculate dates
+  const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
 
   const todayPerformance = staffPerformance.filter(p => p.date === selectedDate);
   const bestPerformer = todayPerformance.reduce((best, current) => 
     current.totalSales > (best?.totalSales || 0) ? current : best, null as CashierPerformance | null
   );
 
-  // Get yesterday's date for the select options
-  const today = new Date().toISOString().split('T')[0];
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="text-center py-8">
+            <div className="text-lg">Loading staff performance data...</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -80,16 +92,12 @@ const StaffPerformance = () => {
 
       {/* Staff Performance Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {loading ? (
+        {todayPerformance.length === 0 ? (
           <Card className="lg:col-span-2">
             <CardContent className="text-center py-8">
-              Loading staff performance data...
-            </CardContent>
-          </Card>
-        ) : todayPerformance.length === 0 ? (
-          <Card className="lg:col-span-2">
-            <CardContent className="text-center py-8">
-              No performance data available for {selectedDate}
+              <div className="text-muted-foreground">
+                No performance data available for {selectedDate}
+              </div>
             </CardContent>
           </Card>
         ) : (

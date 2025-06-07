@@ -11,7 +11,7 @@ const SalesAnalytics = () => {
   const [dateRange, setDateRange] = useState('today');
   const { salesAnalytics, loading } = useManagerData();
 
-  console.log('SalesAnalytics render - dateRange:', dateRange);
+  console.log('SalesAnalytics render - dateRange:', dateRange, 'loading:', loading);
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
@@ -26,6 +26,18 @@ const SalesAnalytics = () => {
     value: amount,
     percentage: ((amount / (salesAnalytics?.totalRevenue || 1)) * 100).toFixed(1)
   }));
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="text-center py-8">
+            <div className="text-lg">Loading sales analytics...</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
