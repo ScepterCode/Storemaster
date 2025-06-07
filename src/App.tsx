@@ -13,6 +13,7 @@ import TransactionsPage from './pages/TransactionsPage';
 import InventoryPage from './pages/InventoryPage';
 import InventoryViewPage from './pages/InventoryViewPage';
 import StockPage from './pages/StockPage';
+import UnauthorizedPage from './pages/UnauthorizedPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import CashdeskPage from './pages/CashDeskPage';
 import ManagerOverviewPage from './pages/ManagerOverviewPage';
@@ -30,6 +31,7 @@ function App() {
                 <Router>
                   <Routes>
                     <Route path="/login" element={<LoginPage />} />
+                    <Route path="/unauthorized" element={<UnauthorizedPage />} />
                     <Route 
                       path="/" 
                       element={
@@ -81,7 +83,7 @@ function App() {
                     <Route 
                       path="/cashdesk" 
                       element={
-                        <ProtectedRoute>
+                        <ProtectedRoute requiredPermission="cash_desk_access">
                           <CashdeskPage />
                         </ProtectedRoute>
                       } 
@@ -89,7 +91,7 @@ function App() {
                     <Route 
                       path="/manager-overview" 
                       element={
-                        <ProtectedRoute>
+                        <ProtectedRoute requiredPermission="reports_view">
                           <ManagerOverviewPage />
                         </ProtectedRoute>
                       } 

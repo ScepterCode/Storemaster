@@ -71,7 +71,7 @@ export function usePermissions() {
       const userRole = roleData || 'staff';
       console.log('User role:', userRole);
 
-      // Define role-based permissions
+      // Define role-based permissions - Updated to give staff more access
       const rolePermissions: Record<UserRole, Permission[]> = {
         owner: [
           'dashboard_view',
@@ -112,6 +112,7 @@ export function usePermissions() {
         staff: [
           'dashboard_view',
           'cash_desk_access',
+          'cash_desk_edit',
           'transactions_view',
           'inventory_view',
           'reports_view',
@@ -136,12 +137,15 @@ export function usePermissions() {
       console.error('Error fetching permissions:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
       
-      // Fallback to basic staff permissions
+      // Fallback to enhanced staff permissions
       const fallbackPermissions: Permission[] = [
         'dashboard_view',
         'cash_desk_access',
+        'cash_desk_edit',
         'transactions_view',
-        'inventory_view'
+        'inventory_view',
+        'reports_view',
+        'settings_view'
       ];
       setPermissions(fallbackPermissions);
       setRole('staff');

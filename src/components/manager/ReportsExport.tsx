@@ -159,13 +159,14 @@ const ReportsExport = () => {
 
             <div className="space-y-2">
               <Label>Specific Cashiers (optional)</Label>
-              <Select>
+              <Select value="all_cashiers" onValueChange={() => {}}>
                 <SelectTrigger>
                   <SelectValue placeholder="All cashiers" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Cashiers</SelectItem>
-                  {/* Add cashier options */}
+                  <SelectItem value="all_cashiers">All Cashiers</SelectItem>
+                  <SelectItem value="cashier_1">John Doe</SelectItem>
+                  <SelectItem value="cashier_2">Jane Smith</SelectItem>
                 </SelectContent>
               </Select>
             </div>
