@@ -23,6 +23,12 @@ const ReportsExport = () => {
   const { generateReport } = useManagerData();
   const { toast } = useToast();
 
+  console.log('ReportsExport render - current state:', {
+    reportType,
+    format,
+    selectedCashier
+  });
+
   const handleGenerateReport = async () => {
     if (!dateFrom || !dateTo) {
       toast({
