@@ -20,13 +20,14 @@ const ReportsExport = () => {
   const [selectedCashier, setSelectedCashier] = useState('all_cashiers');
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const { generateReport } = useManagerData();
+  const { generateReport, staffPerformance, loading } = useManagerData();
   const { toast } = useToast();
 
   console.log('ReportsExport render - current state:', {
     reportType,
     format,
-    selectedCashier
+    selectedCashier,
+    loading
   });
 
   const handleGenerateReport = async () => {
@@ -76,6 +77,24 @@ const ReportsExport = () => {
     { value: 'daily-summary', label: 'Daily Summary', icon: Calendar },
     { value: 'product-sales', label: 'Product Sales Analysis', icon: Table },
   ];
+
+  // Get unique cashiers from staff performance data
+  const availableCashiers = staffPerformance ? 
+    Array.from(new Set(staffPerformance.map(p => ({ id: p.cashierId, name: p.cashierName }))))
+    .filter(cashier => cashier.id && cashier.name) // Ensure no empty values
+    : [];
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="text-center py-8">
+            <div className="text-lg">Loading reports...</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -171,8 +190,11 @@ const ReportsExport = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all_cashiers">All Cashiers</SelectItem>
-                  <SelectItem value="john_doe">John Doe</SelectItem>
-                  <SelectItem value="jane_smith">Jane Smith</SelectItem>
+                  {availableCashiers.map((cashier) => (
+                    <SelectItem key={cashier.id} value={cashier.id}>
+                      {cashier.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
