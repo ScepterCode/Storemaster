@@ -4,9 +4,21 @@ import { useToast } from '@/components/ui/use-toast';
 import { useProducts } from '@/hooks/useProducts';
 import { useCashdeskSession } from '@/hooks/useCashdeskSession';
 import { Sale, SaleItem, SaleCustomer, PaymentMethod } from '@/types/cashdesk';
+import { Product } from '@/types'; // Ensure Product type is imported
 import { generateId } from '@/lib/formatter';
 
 export const useSale = (sessionId: string) => {
+  // Retrieve and set tax rate from environment variable
+  const VITE_TAX_RATE_STRING = import.meta.env.VITE_STANDARD_TAX_RATE;
+  const STANDARD_TAX_RATE = parseFloat(VITE_TAX_RATE_STRING) || 0.075; // Default to 0.075
+
+  if (isNaN(parseFloat(VITE_TAX_RATE_STRING))) {
+    console.warn(
+      'VITE_STANDARD_TAX_RATE environment variable is not set or is invalid. ' +
+      'Defaulting to 7.5% tax rate. Please set this in your .env file (e.g., VITE_STANDARD_TAX_RATE=0.075).'
+    );
+  }
+
   const [currentSale, setCurrentSale] = useState<Sale>({
     id: '',
     transactionId: '',
@@ -26,7 +38,7 @@ export const useSale = (sessionId: string) => {
 
   const { user } = useAuth();
   const { toast } = useToast();
-  const { handleUpdateProduct } = useProducts();
+  const { products, handleUpdateProduct } = useProducts(); // Destructure products
   const { updateSession, currentSession } = useCashdeskSession();
 
   useEffect(() => {
@@ -61,7 +73,7 @@ export const useSale = (sessionId: string) => {
   const calculateTotals = () => {
     const subtotal = currentSale.items.reduce((sum, item) => sum + item.subtotal, 0);
     const discountedSubtotal = subtotal - currentSale.discountAmount;
-    const taxAmount = discountedSubtotal * 0.075; // 7.5% VAT
+    const taxAmount = discountedSubtotal * STANDARD_TAX_RATE; // Use configurable tax rate
     const total = discountedSubtotal + taxAmount;
 
     setCurrentSale(prev => ({
@@ -180,20 +192,30 @@ export const useSale = (sessionId: string) => {
     // Update inventory for each item
     for (const item of currentSale.items) {
       try {
-        // Find the product and update its quantity
-        const updatedProduct = {
-          id: item.productId,
-          name: item.productName,
-          quantity: 0, // Will be set correctly in the update
-          unitPrice: item.unitPrice,
-          synced: false
+        const productInStock = products.find(p => p.id === item.productId);
+
+        if (!productInStock) {
+          console.error(`Product with ID ${item.productId} not found in stock. Cannot update inventory for this item.`);
+          continue; // Skip to the next item
+        }
+
+        const newQuantityInStock = productInStock.quantity - item.quantity;
+
+        if (newQuantityInStock < 0) {
+          console.error(`Insufficient stock for product ${productInStock.name} (ID: ${item.productId}). Sold ${item.quantity}, but only ${productInStock.quantity} in stock. Inventory will be negative.`);
+          // Proceeding with negative quantity as per current instruction
+        }
+
+        const updatedProductData: Product = {
+          ...productInStock,
+          quantity: newQuantityInStock
         };
         
-        // Note: In a real implementation, you'd fetch the current product 
-        // and subtract the sold quantity
-        // await handleUpdateProduct(updatedProduct);
+        await handleUpdateProduct(updatedProductData);
       } catch (error) {
-        console.error('Failed to update inventory for product:', item.productId);
+        console.error('Failed to update inventory for product:', item.productId, error);
+        // Optionally, add a toast notification here for the user
+        // For now, just logging to console as per instructions
       }
     }
 
