@@ -11,6 +11,8 @@ const SalesAnalytics = () => {
   const [dateRange, setDateRange] = useState('today');
   const { salesAnalytics, loading } = useManagerData();
 
+  console.log('SalesAnalytics render - dateRange:', dateRange);
+
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
   const hourlyData = salesAnalytics?.peakHours?.map(hour => ({
@@ -35,7 +37,7 @@ const SalesAnalytics = () => {
         <CardContent>
           <Select value={dateRange} onValueChange={setDateRange}>
             <SelectTrigger className="w-48">
-              <SelectValue />
+              <SelectValue placeholder="Select date range" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="today">Today</SelectItem>

@@ -14,10 +14,16 @@ const StaffPerformance = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const { staffPerformance, loading } = useManagerData();
 
+  console.log('StaffPerformance render - selectedDate:', selectedDate);
+
   const todayPerformance = staffPerformance.filter(p => p.date === selectedDate);
   const bestPerformer = todayPerformance.reduce((best, current) => 
     current.totalSales > (best?.totalSales || 0) ? current : best, null as CashierPerformance | null
   );
+
+  // Get yesterday's date for the select options
+  const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
 
   return (
     <div className="space-y-6">
@@ -33,12 +39,11 @@ const StaffPerformance = () => {
             </label>
             <Select value={selectedDate} onValueChange={setSelectedDate}>
               <SelectTrigger className="w-48">
-                <SelectValue />
+                <SelectValue placeholder="Select date" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={new Date().toISOString().split('T')[0]}>Today</SelectItem>
-                <SelectItem value={new Date(Date.now() - 86400000).toISOString().split('T')[0]}>Yesterday</SelectItem>
-                {/* Add more date options */}
+                <SelectItem value={today}>Today</SelectItem>
+                <SelectItem value={yesterday}>Yesterday</SelectItem>
               </SelectContent>
             </Select>
           </div>
