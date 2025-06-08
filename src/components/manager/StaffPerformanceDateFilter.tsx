@@ -14,76 +14,37 @@ const StaffPerformanceDateFilter = ({
   onDateChange, 
   availableDates 
 }: StaffPerformanceDateFilterProps) => {
-  // Create a safe default date as fallback
-  const safeDefaultDate = React.useMemo(() => {
-    return new Date().toISOString().split('T')[0];
-  }, []);
+  // Default fallback date
+  const defaultDate = new Date().toISOString().split('T')[0];
 
-  // Ultra-strict date validation with enhanced safety
-  const safeDates = React.useMemo(() => {
-    console.log('StaffPerformanceDateFilter - Raw availableDates:', availableDates);
-    
+  // Process available dates with bulletproof validation
+  const validDates = React.useMemo(() => {
     if (!Array.isArray(availableDates) || availableDates.length === 0) {
-      console.log('StaffPerformanceDateFilter - No valid dates array, using default');
-      return [safeDefaultDate];
+      return [defaultDate];
     }
     
-    const validDates = availableDates
-      .filter(date => {
-        // Ultra-strict validation
-        if (!date || typeof date !== 'string') {
-          console.log('StaffPerformanceDateFilter - Invalid date type:', date, typeof date);
-          return false;
-        }
-        const trimmed = date.trim();
-        if (trimmed.length < 10) {
-          console.log('StaffPerformanceDateFilter - Date too short:', trimmed);
-          return false;
-        }
-        if (trimmed === '' || trimmed === 'undefined' || trimmed === 'null' || trimmed.includes('undefined')) {
-          console.log('StaffPerformanceDateFilter - Invalid date content:', trimmed);
-          return false;
-        }
-        
-        // Test if it's a valid date
-        const dateObj = new Date(trimmed);
-        if (isNaN(dateObj.getTime())) {
-          console.log('StaffPerformanceDateFilter - Invalid date object:', trimmed);
-          return false;
-        }
-        
-        return true;
-      })
+    const filtered = availableDates
+      .filter(date => date && typeof date === 'string' && date.trim().length >= 8)
       .map(date => date.trim())
-      .filter((date, index, arr) => arr.indexOf(date) === index) // Remove duplicates
-      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+      .filter(date => {
+        try {
+          const dateObj = new Date(date);
+          return !isNaN(dateObj.getTime());
+        } catch {
+          return false;
+        }
+      });
     
-    // If no valid dates found, use default
-    if (validDates.length === 0) {
-      console.log('StaffPerformanceDateFilter - No valid dates after filtering, using default');
-      return [safeDefaultDate];
-    }
-    
-    console.log('StaffPerformanceDateFilter - Final safe dates:', validDates);
-    return validDates;
-  }, [availableDates, safeDefaultDate]);
+    return filtered.length > 0 ? filtered : [defaultDate];
+  }, [availableDates, defaultDate]);
 
-  // Ensure selectedDate is safe
+  // Ensure selected date is valid
   const safeSelectedDate = React.useMemo(() => {
-    if (!selectedDate || 
-        typeof selectedDate !== 'string' || 
-        selectedDate.trim() === '' || 
-        selectedDate === 'undefined' || 
-        selectedDate === 'null') {
-      console.log('StaffPerformanceDateFilter - Invalid selectedDate, using fallback:', selectedDate);
-      return safeDates[0] || safeDefaultDate;
+    if (!selectedDate || typeof selectedDate !== 'string' || selectedDate.trim() === '') {
+      return validDates[0];
     }
-    console.log('StaffPerformanceDateFilter - Valid selectedDate:', selectedDate);
     return selectedDate;
-  }, [selectedDate, safeDates, safeDefaultDate]);
-
-  console.log('StaffPerformanceDateFilter - Final safeSelectedDate:', safeSelectedDate);
-  console.log('StaffPerformanceDateFilter - Final safeDates:', safeDates);
+  }, [selectedDate, validDates]);
 
   return (
     <Card>
@@ -100,39 +61,22 @@ const StaffPerformanceDateFilter = ({
               <SelectValue placeholder="Select date" />
             </SelectTrigger>
             <SelectContent>
-              {safeDates.length > 0 ? safeDates.map((date, index) => {
-                // Ultra-strict validation before rendering each SelectItem
-                const finalSafeValue = date && 
-                                     typeof date === 'string' && 
-                                     date.trim().length >= 10 
-                  ? date.trim() 
-                  : `safe-date-fallback-${index}-${Date.now()}`;
-                
-                console.log('StaffPerformanceDateFilter - About to render SelectItem with value:', finalSafeValue, 'original:', date);
-                
-                // Additional validation - skip if somehow still empty
-                if (!finalSafeValue || finalSafeValue.trim() === '') {
-                  console.error('StaffPerformanceDateFilter - CRITICAL: Empty value detected for SelectItem:', finalSafeValue, date);
-                  return null;
-                }
+              {validDates.map((date, index) => {
+                // Final safety check - ensure value is never empty
+                const safeValue = date && date.trim() ? date.trim() : `date-${index}-${Date.now()}`;
                 
                 return (
-                  <SelectItem key={`date-option-${index}-${finalSafeValue}`} value={finalSafeValue}>
+                  <SelectItem key={`date-${index}`} value={safeValue}>
                     {(() => {
                       try {
                         return new Date(date).toLocaleDateString();
-                      } catch (error) {
-                        console.error('StaffPerformanceDateFilter - Date formatting error:', error);
+                      } catch {
                         return `Date ${index + 1}`;
                       }
                     })()}
                   </SelectItem>
                 );
-              }).filter(Boolean) : (
-                <SelectItem key="no-dates" value={safeDefaultDate}>
-                  {new Date().toLocaleDateString()}
-                </SelectItem>
-              )}
+              })}
             </SelectContent>
           </Select>
         </div>

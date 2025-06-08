@@ -11,8 +11,6 @@ const SalesAnalytics = () => {
   const [dateRange, setDateRange] = useState('today');
   const { salesAnalytics, loading } = useManagerData();
 
-  console.log('SalesAnalytics render - dateRange:', dateRange, 'loading:', loading, 'analytics:', salesAnalytics);
-
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
   const hourlyData = React.useMemo(() => {
@@ -33,43 +31,16 @@ const SalesAnalytics = () => {
     }));
   }, [salesAnalytics]);
 
-  // Ultra-safe date range options with guaranteed non-empty values
-  const safeDateRangeOptions = React.useMemo(() => {
-    const baseOptions = [
-      { value: 'today', label: 'Today' },
-      { value: 'yesterday', label: 'Yesterday' },
-      { value: 'week', label: 'This Week' },
-      { value: 'month', label: 'This Month' }
-    ];
-
-    // Double-check each option
-    return baseOptions.filter(option => {
-      const isValid = option.value && 
-                     typeof option.value === 'string' && 
-                     option.value.trim().length > 0 && 
-                     option.value !== 'undefined' && 
-                     option.value !== 'null';
-      console.log('SalesAnalytics - Option validation:', option.value, 'isValid:', isValid);
-      return isValid;
-    });
-  }, []);
+  // Static date range options - guaranteed to be valid
+  const dateRangeOptions = [
+    { value: 'today', label: 'Today' },
+    { value: 'yesterday', label: 'Yesterday' },
+    { value: 'week', label: 'This Week' },
+    { value: 'month', label: 'This Month' }
+  ];
 
   // Ensure safe date range value
-  const safeDateRange = React.useMemo(() => {
-    if (!dateRange || 
-        typeof dateRange !== 'string' || 
-        dateRange.trim() === '' || 
-        dateRange === 'undefined' || 
-        dateRange === 'null') {
-      console.log('SalesAnalytics - Invalid dateRange, using default:', dateRange);
-      return 'today';
-    }
-    console.log('SalesAnalytics - Valid dateRange:', dateRange);
-    return dateRange;
-  }, [dateRange]);
-
-  console.log('SalesAnalytics - Final safeDateRange:', safeDateRange);
-  console.log('SalesAnalytics - Final safeDateRangeOptions:', safeDateRangeOptions);
+  const safeDateRange = dateRange && dateRange.trim() ? dateRange : 'today';
 
   if (loading) {
     return (
@@ -96,32 +67,11 @@ const SalesAnalytics = () => {
               <SelectValue placeholder="Select date range" />
             </SelectTrigger>
             <SelectContent>
-              {safeDateRangeOptions.length > 0 ? safeDateRangeOptions.map((option, index) => {
-                // Ultra-strict validation before rendering
-                const finalValue = option.value && 
-                                 typeof option.value === 'string' && 
-                                 option.value.trim().length > 0 
-                  ? option.value.trim() 
-                  : `fallback-range-${index}-${Date.now()}`;
-                
-                console.log('SalesAnalytics - About to render SelectItem with value:', finalValue, 'original:', option.value);
-                
-                // Additional validation - throw error if somehow still empty
-                if (!finalValue || finalValue.trim() === '') {
-                  console.error('SalesAnalytics - CRITICAL: Empty value detected for SelectItem:', finalValue, option);
-                  return null;
-                }
-                
-                return (
-                  <SelectItem key={`range-option-${index}-${finalValue}`} value={finalValue}>
-                    {option.label || `Option ${index + 1}`}
-                  </SelectItem>
-                );
-              }).filter(Boolean) : (
-                <SelectItem key="no-options" value="today">
-                  Today
+              {dateRangeOptions.map((option, index) => (
+                <SelectItem key={`range-${index}`} value={option.value}>
+                  {option.label}
                 </SelectItem>
-              )}
+              ))}
             </SelectContent>
           </Select>
         </CardContent>
