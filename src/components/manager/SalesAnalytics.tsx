@@ -34,17 +34,14 @@ const SalesAnalytics = () => {
   }, [salesAnalytics]);
 
   // Static date range options with guaranteed valid values
-  const dateRangeOptions = React.useMemo(() => {
-    const options = [
-      { value: 'today', label: 'Today' },
-      { value: 'yesterday', label: 'Yesterday' },
-      { value: 'week', label: 'This Week' },
-      { value: 'month', label: 'This Month' }
-    ];
-    
-    console.log('SalesAnalytics - dateRangeOptions:', options);
-    return options;
-  }, []);
+  const dateRangeOptions = [
+    { value: 'today', label: 'Today' },
+    { value: 'yesterday', label: 'Yesterday' },
+    { value: 'week', label: 'This Week' },
+    { value: 'month', label: 'This Month' }
+  ];
+
+  console.log('SalesAnalytics - dateRangeOptions:', dateRangeOptions);
 
   if (loading) {
     return (
@@ -73,11 +70,6 @@ const SalesAnalytics = () => {
             <SelectContent>
               {dateRangeOptions.map(option => {
                 console.log('SalesAnalytics - Rendering SelectItem for option:', option);
-                // Additional safety check before rendering
-                if (!option.value || typeof option.value !== 'string' || option.value.trim() === '') {
-                  console.error('SalesAnalytics - Skipping invalid option in render:', option);
-                  return null;
-                }
                 return (
                   <SelectItem key={`range-${option.value}`} value={option.value}>
                     {option.label}

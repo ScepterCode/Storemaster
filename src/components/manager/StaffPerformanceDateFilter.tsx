@@ -90,19 +90,17 @@ const StaffPerformanceDateFilter = ({
             </SelectTrigger>
             <SelectContent>
               {sortedUniqueDates.length > 0 ? (
-                sortedUniqueDates.map((date, index) => {
-                  console.log('StaffPerformanceDateFilter - Rendering SelectItem for date:', date, 'index:', index);
-                  // Additional safety check before rendering
-                  if (!date || typeof date !== 'string' || date.trim() === '') {
-                    console.error('StaffPerformanceDateFilter - Skipping invalid date in render:', date);
-                    return null;
-                  }
-                  return (
-                    <SelectItem key={`date-${index}-${date}`} value={date}>
-                      {new Date(date).toLocaleDateString()}
-                    </SelectItem>
-                  );
-                })
+                sortedUniqueDates
+                  .filter(date => date && typeof date === 'string' && date.trim() !== '' && date.trim().length >= 10)
+                  .map((date, index) => {
+                    const safeDate = date.trim();
+                    console.log('StaffPerformanceDateFilter - Rendering SelectItem for date:', safeDate, 'index:', index);
+                    return (
+                      <SelectItem key={`date-${index}-${safeDate}`} value={safeDate}>
+                        {new Date(safeDate).toLocaleDateString()}
+                      </SelectItem>
+                    );
+                  })
               ) : (
                 <SelectItem value="no_data_available" disabled>
                   No performance data available

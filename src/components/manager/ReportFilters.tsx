@@ -91,6 +91,13 @@ const ReportFilters = ({
     return filtered;
   }, [availableCashiers]);
 
+  // Predefined format options to ensure they always have valid values
+  const formatOptions = [
+    { value: 'csv', label: 'CSV (Excel)' },
+    { value: 'pdf', label: 'PDF Report' },
+    { value: 'json', label: 'JSON Data' }
+  ];
+
   console.log('ReportFilters - format:', format);
   console.log('ReportFilters - selectedCashier:', selectedCashier);
 
@@ -126,9 +133,11 @@ const ReportFilters = ({
             <SelectValue placeholder="Select format" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="csv">CSV (Excel)</SelectItem>
-            <SelectItem value="pdf">PDF Report</SelectItem>
-            <SelectItem value="json">JSON Data</SelectItem>
+            {formatOptions.map(option => (
+              <SelectItem key={`format-${option.value}`} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -166,19 +175,18 @@ const ReportFilters = ({
             <SelectContent>
               <SelectItem value="all_cashiers">All Cashiers</SelectItem>
               {validCashiers.length > 0 ? (
-                validCashiers.map((cashier) => {
-                  console.log('ReportFilters - Rendering SelectItem for cashier:', cashier);
-                  // Additional safety check before rendering
-                  if (!cashier.id || typeof cashier.id !== 'string' || cashier.id.trim() === '') {
-                    console.error('ReportFilters - Skipping invalid cashier in render:', cashier);
-                    return null;
-                  }
-                  return (
-                    <SelectItem key={`cashier-${cashier.id}`} value={cashier.id}>
-                      {cashier.name}
-                    </SelectItem>
-                  );
-                })
+                validCashiers
+                  .filter(cashier => cashier.id && typeof cashier.id === 'string' && cashier.id.trim() !== '')
+                  .map((cashier) => {
+                    const safeId = cashier.id.trim();
+                    const safeName = cashier.name.trim();
+                    console.log('ReportFilters - Rendering SelectItem for cashier:', { id: safeId, name: safeName });
+                    return (
+                      <SelectItem key={`cashier-${safeId}`} value={safeId}>
+                        {safeName}
+                      </SelectItem>
+                    );
+                  })
               ) : (
                 <SelectItem value="no_cashiers_available" disabled>
                   No cashiers available
