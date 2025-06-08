@@ -41,27 +41,47 @@ const ReportFilters = ({
   onIncludeRefundedChange,
   onCashierChange
 }: ReportFiltersProps) => {
-  // Safe cashiers with ultimate validation
+  // Ultra-safe cashiers with enhanced validation
   const safeCashiers = React.useMemo(() => {
     console.log('ReportFilters - Raw availableCashiers:', availableCashiers);
     
     if (!Array.isArray(availableCashiers)) {
+      console.log('ReportFilters - availableCashiers is not an array');
       return [];
     }
     
     const validCashiers = availableCashiers
       .filter(cashier => {
         // Ultra-strict validation
-        if (!cashier || typeof cashier !== 'object') return false;
-        if (!cashier.id || typeof cashier.id !== 'string') return false;
-        if (!cashier.name || typeof cashier.name !== 'string') return false;
+        if (!cashier || typeof cashier !== 'object') {
+          console.log('ReportFilters - Invalid cashier object:', cashier);
+          return false;
+        }
+        if (!cashier.id || typeof cashier.id !== 'string') {
+          console.log('ReportFilters - Invalid cashier id:', cashier.id);
+          return false;
+        }
+        if (!cashier.name || typeof cashier.name !== 'string') {
+          console.log('ReportFilters - Invalid cashier name:', cashier.name);
+          return false;
+        }
         
         const safeId = cashier.id.trim();
         const safeName = cashier.name.trim();
         
-        if (safeId === '' || safeName === '') return false;
-        if (safeId === 'unknown' || safeName === 'Unknown Cashier') return false;
-        if (safeId.includes('undefined') || safeName.includes('undefined')) return false;
+        if (safeId === '' || safeName === '') {
+          console.log('ReportFilters - Empty cashier data:', safeId, safeName);
+          return false;
+        }
+        if (safeId === 'unknown' || safeName === 'Unknown Cashier') {
+          console.log('ReportFilters - Unknown cashier data:', safeId, safeName);
+          return false;
+        }
+        if (safeId.includes('undefined') || safeName.includes('undefined') || 
+            safeId.includes('null') || safeName.includes('null')) {
+          console.log('ReportFilters - Contains undefined/null:', safeId, safeName);
+          return false;
+        }
         
         return true;
       })
@@ -77,31 +97,56 @@ const ReportFilters = ({
     return validCashiers;
   }, [availableCashiers]);
 
-  // Safe format options - always guaranteed to have valid values
-  const safeFormatOptions = [
-    { value: 'csv', label: 'CSV (Excel)' },
-    { value: 'pdf', label: 'PDF Report' },
-    { value: 'json', label: 'JSON Data' }
-  ];
+  // Ultra-safe format options with guaranteed valid values
+  const safeFormatOptions = React.useMemo(() => {
+    const baseOptions = [
+      { value: 'csv', label: 'CSV (Excel)' },
+      { value: 'pdf', label: 'PDF Report' },
+      { value: 'json', label: 'JSON Data' }
+    ];
+
+    // Validate each option
+    return baseOptions.filter(option => {
+      const isValid = option.value && 
+                     typeof option.value === 'string' && 
+                     option.value.trim().length > 0 && 
+                     option.value !== 'undefined' && 
+                     option.value !== 'null';
+      console.log('ReportFilters - Format option validation:', option.value, 'isValid:', isValid);
+      return isValid;
+    });
+  }, []);
 
   // Ensure safe format value
   const safeFormat = React.useMemo(() => {
-    if (!format || format.trim() === '' || format === 'undefined') {
+    if (!format || 
+        typeof format !== 'string' || 
+        format.trim() === '' || 
+        format === 'undefined' || 
+        format === 'null') {
+      console.log('ReportFilters - Invalid format, using default:', format);
       return 'csv';
     }
+    console.log('ReportFilters - Valid format:', format);
     return format;
   }, [format]);
 
   // Ensure safe cashier value
   const safeCashierValue = React.useMemo(() => {
-    if (!selectedCashier || selectedCashier.trim() === '' || selectedCashier === 'undefined') {
+    if (!selectedCashier || 
+        typeof selectedCashier !== 'string' || 
+        selectedCashier.trim() === '' || 
+        selectedCashier === 'undefined' || 
+        selectedCashier === 'null') {
+      console.log('ReportFilters - Invalid selectedCashier, using default:', selectedCashier);
       return 'all_cashiers';
     }
+    console.log('ReportFilters - Valid selectedCashier:', selectedCashier);
     return selectedCashier;
   }, [selectedCashier]);
 
-  console.log('ReportFilters - safeFormat:', safeFormat);
-  console.log('ReportFilters - safeCashierValue:', safeCashierValue);
+  console.log('ReportFilters - Final safeFormat:', safeFormat);
+  console.log('ReportFilters - Final safeCashierValue:', safeCashierValue);
 
   return (
     <div className="space-y-6">
@@ -135,20 +180,32 @@ const ReportFilters = ({
             <SelectValue placeholder="Select format" />
           </SelectTrigger>
           <SelectContent>
-            {safeFormatOptions.map(option => {
-              // Double-check value is safe
-              const finalValue = option.value && option.value.trim() !== '' 
-                ? option.value 
-                : `format-${option.label.toLowerCase().replace(/[^a-z]/g, '')}`;
+            {safeFormatOptions.length > 0 ? safeFormatOptions.map((option, index) => {
+              // Ultra-strict validation before rendering
+              const finalValue = option.value && 
+                               typeof option.value === 'string' && 
+                               option.value.trim().length > 0 
+                ? option.value.trim() 
+                : `fallback-format-${index}-${Date.now()}`;
               
-              console.log('ReportFilters - Rendering format SelectItem with value:', finalValue);
+              console.log('ReportFilters - About to render format SelectItem with value:', finalValue, 'original:', option.value);
+              
+              // Additional validation - skip if somehow still empty
+              if (!finalValue || finalValue.trim() === '') {
+                console.error('ReportFilters - CRITICAL: Empty value detected for format SelectItem:', finalValue, option);
+                return null;
+              }
               
               return (
-                <SelectItem key={`format-${option.value}`} value={finalValue}>
-                  {option.label}
+                <SelectItem key={`format-option-${index}-${finalValue}`} value={finalValue}>
+                  {option.label || `Format ${index + 1}`}
                 </SelectItem>
               );
-            })}
+            }).filter(Boolean) : (
+              <SelectItem key="default-format" value="csv">
+                CSV (Excel)
+              </SelectItem>
+            )}
           </SelectContent>
         </Select>
       </div>
@@ -184,21 +241,29 @@ const ReportFilters = ({
               <SelectValue placeholder="Select cashier" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all_cashiers">All Cashiers</SelectItem>
-              {safeCashiers.map((cashier, index) => {
-                // Triple-check each value before rendering
-                const finalSafeId = cashier.id && cashier.id.trim() !== '' 
-                  ? cashier.id 
-                  : `cashier-${index}-${Date.now()}`;
+              <SelectItem key="all-cashiers-option" value="all_cashiers">All Cashiers</SelectItem>
+              {safeCashiers.length > 0 ? safeCashiers.map((cashier, index) => {
+                // Ultra-strict validation before rendering each cashier
+                const finalSafeId = cashier.id && 
+                                  typeof cashier.id === 'string' && 
+                                  cashier.id.trim().length > 0 
+                  ? cashier.id.trim() 
+                  : `fallback-cashier-${index}-${Date.now()}`;
                 
-                console.log('ReportFilters - Rendering cashier SelectItem with value:', finalSafeId);
+                console.log('ReportFilters - About to render cashier SelectItem with value:', finalSafeId, 'original:', cashier.id);
+                
+                // Additional validation - skip if somehow still empty
+                if (!finalSafeId || finalSafeId.trim() === '') {
+                  console.error('ReportFilters - CRITICAL: Empty value detected for cashier SelectItem:', finalSafeId, cashier);
+                  return null;
+                }
                 
                 return (
-                  <SelectItem key={`cashier-${index}`} value={finalSafeId}>
-                    {cashier.name}
+                  <SelectItem key={`cashier-option-${index}-${finalSafeId}`} value={finalSafeId}>
+                    {cashier.name || `Cashier ${index + 1}`}
                   </SelectItem>
                 );
-              })}
+              }).filter(Boolean) : null}
             </SelectContent>
           </Select>
         </div>

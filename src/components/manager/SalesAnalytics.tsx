@@ -33,24 +33,43 @@ const SalesAnalytics = () => {
     }));
   }, [salesAnalytics]);
 
-  // Safe date range options - always guaranteed to have valid values
-  const safeDateRangeOptions = [
-    { value: 'today', label: 'Today' },
-    { value: 'yesterday', label: 'Yesterday' },
-    { value: 'week', label: 'This Week' },
-    { value: 'month', label: 'This Month' }
-  ];
+  // Ultra-safe date range options with guaranteed non-empty values
+  const safeDateRangeOptions = React.useMemo(() => {
+    const baseOptions = [
+      { value: 'today', label: 'Today' },
+      { value: 'yesterday', label: 'Yesterday' },
+      { value: 'week', label: 'This Week' },
+      { value: 'month', label: 'This Month' }
+    ];
+
+    // Double-check each option
+    return baseOptions.filter(option => {
+      const isValid = option.value && 
+                     typeof option.value === 'string' && 
+                     option.value.trim().length > 0 && 
+                     option.value !== 'undefined' && 
+                     option.value !== 'null';
+      console.log('SalesAnalytics - Option validation:', option.value, 'isValid:', isValid);
+      return isValid;
+    });
+  }, []);
 
   // Ensure safe date range value
   const safeDateRange = React.useMemo(() => {
-    if (!dateRange || dateRange.trim() === '' || dateRange === 'undefined') {
+    if (!dateRange || 
+        typeof dateRange !== 'string' || 
+        dateRange.trim() === '' || 
+        dateRange === 'undefined' || 
+        dateRange === 'null') {
+      console.log('SalesAnalytics - Invalid dateRange, using default:', dateRange);
       return 'today';
     }
+    console.log('SalesAnalytics - Valid dateRange:', dateRange);
     return dateRange;
   }, [dateRange]);
 
-  console.log('SalesAnalytics - safeDateRange:', safeDateRange);
-  console.log('SalesAnalytics - safeDateRangeOptions:', safeDateRangeOptions);
+  console.log('SalesAnalytics - Final safeDateRange:', safeDateRange);
+  console.log('SalesAnalytics - Final safeDateRangeOptions:', safeDateRangeOptions);
 
   if (loading) {
     return (
@@ -77,20 +96,32 @@ const SalesAnalytics = () => {
               <SelectValue placeholder="Select date range" />
             </SelectTrigger>
             <SelectContent>
-              {safeDateRangeOptions.map((option, index) => {
-                // Ensure value is never empty
-                const safeValue = option.value && option.value.trim() !== '' 
-                  ? option.value 
-                  : `safe-range-${index}`;
+              {safeDateRangeOptions.length > 0 ? safeDateRangeOptions.map((option, index) => {
+                // Ultra-strict validation before rendering
+                const finalValue = option.value && 
+                                 typeof option.value === 'string' && 
+                                 option.value.trim().length > 0 
+                  ? option.value.trim() 
+                  : `fallback-range-${index}-${Date.now()}`;
                 
-                console.log('SalesAnalytics - Rendering SelectItem with value:', safeValue);
+                console.log('SalesAnalytics - About to render SelectItem with value:', finalValue, 'original:', option.value);
+                
+                // Additional validation - throw error if somehow still empty
+                if (!finalValue || finalValue.trim() === '') {
+                  console.error('SalesAnalytics - CRITICAL: Empty value detected for SelectItem:', finalValue, option);
+                  return null;
+                }
                 
                 return (
-                  <SelectItem key={`range-${index}`} value={safeValue}>
-                    {option.label}
+                  <SelectItem key={`range-option-${index}-${finalValue}`} value={finalValue}>
+                    {option.label || `Option ${index + 1}`}
                   </SelectItem>
                 );
-              })}
+              }).filter(Boolean) : (
+                <SelectItem key="no-options" value="today">
+                  Today
+                </SelectItem>
+              )}
             </SelectContent>
           </Select>
         </CardContent>
