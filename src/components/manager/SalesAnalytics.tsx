@@ -40,6 +40,17 @@ const SalesAnalytics = () => {
     { value: 'month', label: 'This Month' }
   ];
 
+  // Filter out any invalid options (should not happen with static data, but being safe)
+  const validDateRangeOptions = dateRangeOptions.filter(option => 
+    option && 
+    option.value && 
+    typeof option.value === 'string' && 
+    option.value.trim() !== '' &&
+    option.label &&
+    typeof option.label === 'string' &&
+    option.label.trim() !== ''
+  );
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -65,7 +76,7 @@ const SalesAnalytics = () => {
               <SelectValue placeholder="Select date range" />
             </SelectTrigger>
             <SelectContent>
-              {dateRangeOptions.map(option => (
+              {validDateRangeOptions.map(option => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>

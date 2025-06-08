@@ -41,6 +41,17 @@ const ReportFilters = ({
   onIncludeRefundedChange,
   onCashierChange
 }: ReportFiltersProps) => {
+  // Filter out any cashiers with empty or invalid IDs
+  const validCashiers = availableCashiers.filter(cashier => 
+    cashier && 
+    cashier.id && 
+    typeof cashier.id === 'string' && 
+    cashier.id.trim() !== '' &&
+    cashier.name &&
+    typeof cashier.name === 'string' &&
+    cashier.name.trim() !== ''
+  );
+
   return (
     <div className="space-y-6">
       {/* Date Range */}
@@ -112,14 +123,14 @@ const ReportFilters = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all_cashiers">All Cashiers</SelectItem>
-              {availableCashiers.length > 0 ? (
-                availableCashiers.map((cashier) => (
+              {validCashiers.length > 0 ? (
+                validCashiers.map((cashier) => (
                   <SelectItem key={cashier.id} value={cashier.id}>
                     {cashier.name}
                   </SelectItem>
                 ))
               ) : (
-                <SelectItem value="no-cashiers-available" disabled>
+                <SelectItem value="no_cashiers_available" disabled>
                   No cashiers available
                 </SelectItem>
               )}

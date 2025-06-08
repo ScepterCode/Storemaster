@@ -14,6 +14,15 @@ const StaffPerformanceDateFilter = ({
   onDateChange, 
   availableDates 
 }: StaffPerformanceDateFilterProps) => {
+  // Filter out any invalid dates
+  const validDates = availableDates.filter(date => 
+    date && 
+    typeof date === 'string' && 
+    date.trim() !== '' && 
+    date.trim().length >= 10 && // YYYY-MM-DD format
+    !isNaN(new Date(date).getTime())
+  );
+
   return (
     <Card>
       <CardHeader>
@@ -29,14 +38,14 @@ const StaffPerformanceDateFilter = ({
               <SelectValue placeholder="Select date" />
             </SelectTrigger>
             <SelectContent>
-              {availableDates.length > 0 ? (
-                availableDates.map(date => (
+              {validDates.length > 0 ? (
+                validDates.map(date => (
                   <SelectItem key={date} value={date}>
                     {new Date(date).toLocaleDateString()}
                   </SelectItem>
                 ))
               ) : (
-                <SelectItem value="no-data-available" disabled>
+                <SelectItem value="no_data_available" disabled>
                   No performance data available
                 </SelectItem>
               )}
