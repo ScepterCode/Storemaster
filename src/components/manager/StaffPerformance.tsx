@@ -8,39 +8,26 @@ import StaffPerformanceTopPerformer from './StaffPerformanceTopPerformer';
 import StaffPerformanceCard from './StaffPerformanceCard';
 
 const StaffPerformance = () => {
-  const [selectedDate, setSelectedDate] = useState(() => {
-    return new Date().toISOString().split('T')[0];
-  });
+  const today = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState(today);
   const { staffPerformance, loading } = useManagerData();
 
-  console.log('StaffPerformance render - selectedDate:', selectedDate, 'loading:', loading);
-
-  // Calculate available dates from performance data with strict validation
   const availableDates = React.useMemo(() => {
     if (!staffPerformance || !Array.isArray(staffPerformance)) {
-      return [];
+      return [today];
     }
     
-    const validDates = staffPerformance
+    const dates = staffPerformance
       .map(p => p.date)
-      .filter(date => {
-        // Strict validation: must be non-empty string with valid date format
-        return date && 
-               typeof date === 'string' && 
-               date.trim() !== '' && 
-               date.trim().length >= 10 && // YYYY-MM-DD format
-               !isNaN(new Date(date).getTime());
-      })
-      .map(date => date.trim());
+      .filter(date => date && typeof date === 'string' && date.length >= 10)
+      .filter(date => !isNaN(new Date(date).getTime()));
     
-    const uniqueDates = Array.from(new Set(validDates))
+    const uniqueDates = Array.from(new Set(dates))
       .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
     
-    console.log('Available dates:', uniqueDates);
-    return uniqueDates;
-  }, [staffPerformance]);
+    return uniqueDates.length > 0 ? uniqueDates : [today];
+  }, [staffPerformance, today]);
 
-  // Filter performance data by selected date
   const todayPerformance = React.useMemo(() => {
     if (!staffPerformance || !Array.isArray(staffPerformance)) {
       return [];
@@ -70,14 +57,12 @@ const StaffPerformance = () => {
 
   return (
     <div className="space-y-6">
-      {/* Date Filter */}
       <StaffPerformanceDateFilter
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
         availableDates={availableDates}
       />
 
-      {/* Performance Summary */}
       {bestPerformer && (
         <StaffPerformanceTopPerformer
           bestPerformer={bestPerformer}
@@ -85,7 +70,6 @@ const StaffPerformance = () => {
         />
       )}
 
-      {/* Staff Performance Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {todayPerformance.length === 0 ? (
           <Card className="lg:col-span-2">
