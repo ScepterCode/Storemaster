@@ -13,6 +13,7 @@ import TransactionsPage from './pages/TransactionsPage';
 import InventoryPage from './pages/InventoryPage';
 import InventoryViewPage from './pages/InventoryViewPage';
 import StockPage from './pages/StockPage';
+import ReportsPage from './pages/ReportsPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import CashdeskPage from './pages/CashDeskPage';
@@ -69,6 +70,14 @@ function App() {
                       element={
                         <ProtectedRoute>
                           <TransactionsPage />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/reports" 
+                      element={
+                        <ProtectedRoute requiredPermission="reports_view">
+                          <ReportsPage />
                         </ProtectedRoute>
                       } 
                     />
