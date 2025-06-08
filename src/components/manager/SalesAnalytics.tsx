@@ -33,15 +33,24 @@ const SalesAnalytics = () => {
     }));
   }, [salesAnalytics]);
 
-  // Static date range options with guaranteed valid values
-  const dateRangeOptions = [
+  // Safe date range options - always guaranteed to have valid values
+  const safeDateRangeOptions = [
     { value: 'today', label: 'Today' },
     { value: 'yesterday', label: 'Yesterday' },
     { value: 'week', label: 'This Week' },
     { value: 'month', label: 'This Month' }
   ];
 
-  console.log('SalesAnalytics - dateRangeOptions:', dateRangeOptions);
+  // Ensure safe date range value
+  const safeDateRange = React.useMemo(() => {
+    if (!dateRange || dateRange.trim() === '' || dateRange === 'undefined') {
+      return 'today';
+    }
+    return dateRange;
+  }, [dateRange]);
+
+  console.log('SalesAnalytics - safeDateRange:', safeDateRange);
+  console.log('SalesAnalytics - safeDateRangeOptions:', safeDateRangeOptions);
 
   if (loading) {
     return (
@@ -63,15 +72,21 @@ const SalesAnalytics = () => {
           <CardTitle>Sales Analytics</CardTitle>
         </CardHeader>
         <CardContent>
-          <Select value={dateRange || 'today'} onValueChange={setDateRange}>
+          <Select value={safeDateRange} onValueChange={setDateRange}>
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Select date range" />
             </SelectTrigger>
             <SelectContent>
-              {dateRangeOptions.map(option => {
-                console.log('SalesAnalytics - Rendering SelectItem for option:', option);
+              {safeDateRangeOptions.map((option, index) => {
+                // Triple-check each value before rendering
+                const finalValue = option.value && option.value.trim() !== '' 
+                  ? option.value 
+                  : `range-${index}-${Date.now()}`;
+                
+                console.log('SalesAnalytics - Rendering SelectItem with value:', finalValue);
+                
                 return (
-                  <SelectItem key={`range-${option.value}`} value={option.value}>
+                  <SelectItem key={`range-${index}`} value={finalValue}>
                     {option.label}
                   </SelectItem>
                 );
@@ -232,7 +247,7 @@ const SalesAnalytics = () => {
             )}
           </div>
         </CardContent>
-      </Card>
+      </div>
     </div>
   );
 };

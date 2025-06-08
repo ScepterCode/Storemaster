@@ -14,65 +14,58 @@ const StaffPerformanceDateFilter = ({
   onDateChange, 
   availableDates 
 }: StaffPerformanceDateFilterProps) => {
-  // Filter out any invalid dates with comprehensive validation
-  const validDates = React.useMemo(() => {
+  // Create a safe default date as fallback
+  const safeDefaultDate = React.useMemo(() => {
+    return new Date().toISOString().split('T')[0];
+  }, []);
+
+  // Filter and validate dates with ultimate safety
+  const safeDates = React.useMemo(() => {
     console.log('StaffPerformanceDateFilter - Raw availableDates:', availableDates);
     
-    if (!Array.isArray(availableDates)) {
-      console.log('StaffPerformanceDateFilter - availableDates is not an array');
-      return [];
+    if (!Array.isArray(availableDates) || availableDates.length === 0) {
+      console.log('StaffPerformanceDateFilter - No valid dates, using default');
+      return [safeDefaultDate];
     }
     
-    const filtered = availableDates.filter(date => {
-      // Basic type and existence checks
-      if (!date || typeof date !== 'string') {
-        console.log('StaffPerformanceDateFilter - Invalid date (not string):', date);
-        return false;
-      }
-      
-      // Check for empty or whitespace-only strings
-      const trimmedDate = date.trim();
-      if (trimmedDate === '' || trimmedDate.length === 0) {
-        console.log('StaffPerformanceDateFilter - Empty date after trim:', date);
-        return false;
-      }
-      
-      // Check minimum length for YYYY-MM-DD format
-      if (trimmedDate.length < 10) {
-        console.log('StaffPerformanceDateFilter - Date too short:', trimmedDate);
-        return false;
-      }
-      
-      // Validate date format and ensure it's a valid date
-      const dateObj = new Date(trimmedDate);
-      if (isNaN(dateObj.getTime())) {
-        console.log('StaffPerformanceDateFilter - Invalid date object:', trimmedDate);
-        return false;
-      }
-      
-      // Additional check to ensure it's not an invalid date string
-      if (trimmedDate.includes('undefined') || trimmedDate.includes('null')) {
-        console.log('StaffPerformanceDateFilter - Date contains undefined/null:', trimmedDate);
-        return false;
-      }
-      
-      return true;
-    }).map(date => date.trim());
+    const validDates = availableDates
+      .filter(date => {
+        // Ultra-strict validation
+        if (!date || typeof date !== 'string') return false;
+        const trimmed = date.trim();
+        if (trimmed.length < 10) return false; // Must be at least YYYY-MM-DD length
+        if (trimmed === '' || trimmed === 'undefined' || trimmed === 'null') return false;
+        
+        // Test if it's a valid date
+        const dateObj = new Date(trimmed);
+        if (isNaN(dateObj.getTime())) return false;
+        
+        return true;
+      })
+      .map(date => date.trim())
+      .filter((date, index, arr) => arr.indexOf(date) === index) // Remove duplicates
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
     
-    console.log('StaffPerformanceDateFilter - Valid dates after filtering:', filtered);
-    return filtered;
-  }, [availableDates]);
+    // If no valid dates found, use default
+    if (validDates.length === 0) {
+      console.log('StaffPerformanceDateFilter - No valid dates after filtering, using default');
+      return [safeDefaultDate];
+    }
+    
+    console.log('StaffPerformanceDateFilter - Final safe dates:', validDates);
+    return validDates;
+  }, [availableDates, safeDefaultDate]);
 
-  // Get unique and sorted dates
-  const sortedUniqueDates = React.useMemo(() => {
-    const uniqueDates = Array.from(new Set(validDates));
-    const sorted = uniqueDates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
-    console.log('StaffPerformanceDateFilter - Final sorted dates:', sorted);
-    return sorted;
-  }, [validDates]);
+  // Ensure selectedDate is safe
+  const safeSelectedDate = React.useMemo(() => {
+    if (!selectedDate || selectedDate.trim() === '' || selectedDate === 'undefined') {
+      return safeDates[0] || safeDefaultDate;
+    }
+    return selectedDate;
+  }, [selectedDate, safeDates, safeDefaultDate]);
 
-  console.log('StaffPerformanceDateFilter - selectedDate:', selectedDate);
-  console.log('StaffPerformanceDateFilter - sortedUniqueDates:', sortedUniqueDates);
+  console.log('StaffPerformanceDateFilter - safeSelectedDate:', safeSelectedDate);
+  console.log('StaffPerformanceDateFilter - safeDates:', safeDates);
 
   return (
     <Card>
@@ -84,28 +77,31 @@ const StaffPerformanceDateFilter = ({
           <label htmlFor="date-select" className="text-sm font-medium">
             Select Date:
           </label>
-          <Select value={selectedDate || ''} onValueChange={onDateChange}>
+          <Select value={safeSelectedDate} onValueChange={onDateChange}>
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Select date" />
             </SelectTrigger>
             <SelectContent>
-              {sortedUniqueDates.length > 0 ? (
-                sortedUniqueDates
-                  .filter(date => date && typeof date === 'string' && date.trim() !== '' && date.trim().length >= 10)
-                  .map((date, index) => {
-                    const safeDate = date.trim();
-                    console.log('StaffPerformanceDateFilter - Rendering SelectItem for date:', safeDate, 'index:', index);
-                    return (
-                      <SelectItem key={`date-${index}-${safeDate}`} value={safeDate}>
-                        {new Date(safeDate).toLocaleDateString()}
-                      </SelectItem>
-                    );
-                  })
-              ) : (
-                <SelectItem value="no_data_available" disabled>
-                  No performance data available
-                </SelectItem>
-              )}
+              {safeDates.map((date, index) => {
+                // Triple-check each value before rendering
+                const finalSafeValue = date && typeof date === 'string' && date.trim().length >= 10 
+                  ? date.trim() 
+                  : `safe-date-${index}-${Date.now()}`;
+                
+                console.log('StaffPerformanceDateFilter - Rendering SelectItem with value:', finalSafeValue);
+                
+                return (
+                  <SelectItem key={`date-option-${index}`} value={finalSafeValue}>
+                    {(() => {
+                      try {
+                        return new Date(date).toLocaleDateString();
+                      } catch (error) {
+                        return `Date ${index + 1}`;
+                      }
+                    })()}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         </div>
