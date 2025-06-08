@@ -48,28 +48,56 @@ const ReportFilters = ({
   ];
 
   const validCashiers = React.useMemo(() => {
+    console.log('ReportFilters - Raw availableCashiers:', availableCashiers);
+    
     if (!Array.isArray(availableCashiers)) {
+      console.log('ReportFilters - availableCashiers is not an array');
       return [];
     }
     
-    return availableCashiers
-      .filter(cashier => 
-        cashier && 
-        cashier.id && 
-        cashier.name && 
-        typeof cashier.id === 'string' && 
-        typeof cashier.name === 'string' &&
-        cashier.id.trim() !== '' &&
-        cashier.name.trim() !== ''
-      )
+    const processed = availableCashiers
+      .filter(cashier => {
+        // Ultra-strict validation
+        const isValid = cashier && 
+                       cashier.id && 
+                       cashier.name && 
+                       typeof cashier.id === 'string' && 
+                       typeof cashier.name === 'string' &&
+                       cashier.id.trim() !== '' &&
+                       cashier.name.trim() !== '' &&
+                       cashier.id.trim().length > 0 &&
+                       cashier.name.trim().length > 0 &&
+                       cashier.id.trim() !== 'undefined' &&
+                       cashier.name.trim() !== 'undefined' &&
+                       cashier.id.trim() !== 'null' &&
+                       cashier.name.trim() !== 'null';
+        
+        if (!isValid) {
+          console.log('ReportFilters - Filtering out invalid cashier:', cashier);
+        }
+        return isValid;
+      })
       .map(cashier => ({
         id: cashier.id.trim(),
         name: cashier.name.trim()
-      }));
+      }))
+      .filter(cashier => cashier.id.length > 0 && cashier.name.length > 0); // Extra safety
+    
+    console.log('ReportFilters - Final validCashiers:', processed);
+    return processed;
   }, [availableCashiers]);
 
-  const safeFormat = format && format.trim() ? format : 'csv';
-  const safeCashierValue = selectedCashier && selectedCashier.trim() ? selectedCashier : 'all_cashiers';
+  const safeFormat = React.useMemo(() => {
+    const safe = format && format.trim() && format.trim().length > 0 ? format.trim() : 'csv';
+    console.log('ReportFilters - safeFormat:', safe);
+    return safe;
+  }, [format]);
+
+  const safeCashierValue = React.useMemo(() => {
+    const safe = selectedCashier && selectedCashier.trim() && selectedCashier.trim().length > 0 ? selectedCashier.trim() : 'all_cashiers';
+    console.log('ReportFilters - safeCashierValue:', safe);
+    return safe;
+  }, [selectedCashier]);
 
   return (
     <div className="space-y-6">
@@ -103,11 +131,22 @@ const ReportFilters = ({
             <SelectValue placeholder="Select format" />
           </SelectTrigger>
           <SelectContent>
-            {formatOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
+            {formatOptions.map((option) => {
+              // Final safety check before rendering
+              if (!option.value || option.value.trim() === '' || option.value.trim().length === 0) {
+                console.error('ReportFilters - BLOCKED empty format option from rendering:', option);
+                return null;
+              }
+              
+              const safeValue = option.value.trim();
+              console.log('ReportFilters - Rendering format SelectItem with value:', safeValue);
+              
+              return (
+                <SelectItem key={safeValue} value={safeValue}>
+                  {option.label}
+                </SelectItem>
+              );
+            })}
           </SelectContent>
         </Select>
       </div>
@@ -144,11 +183,22 @@ const ReportFilters = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all_cashiers">All Cashiers</SelectItem>
-              {validCashiers.map((cashier) => (
-                <SelectItem key={cashier.id} value={cashier.id}>
-                  {cashier.name}
-                </SelectItem>
-              ))}
+              {validCashiers.map((cashier) => {
+                // Final safety check before rendering
+                if (!cashier.id || cashier.id.trim() === '' || cashier.id.trim().length === 0) {
+                  console.error('ReportFilters - BLOCKED empty cashier from rendering:', cashier);
+                  return null;
+                }
+                
+                const safeId = cashier.id.trim();
+                console.log('ReportFilters - Rendering cashier SelectItem with value:', safeId);
+                
+                return (
+                  <SelectItem key={safeId} value={safeId}>
+                    {cashier.name}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         </div>

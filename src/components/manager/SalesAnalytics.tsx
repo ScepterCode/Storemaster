@@ -31,14 +31,38 @@ const SalesAnalytics = () => {
     }));
   }, [salesAnalytics]);
 
-  const dateRangeOptions = [
-    { value: 'today', label: 'Today' },
-    { value: 'yesterday', label: 'Yesterday' },
-    { value: 'week', label: 'This Week' },
-    { value: 'month', label: 'This Month' }
-  ];
+  const dateRangeOptions = React.useMemo(() => {
+    const options = [
+      { value: 'today', label: 'Today' },
+      { value: 'yesterday', label: 'Yesterday' },
+      { value: 'week', label: 'This Week' },
+      { value: 'month', label: 'This Month' }
+    ];
+    
+    // Validate all options have non-empty values
+    const validOptions = options.filter(option => {
+      const isValid = option.value && 
+                     option.value.trim() !== '' && 
+                     option.value.trim().length > 0 &&
+                     option.label &&
+                     option.label.trim() !== '' &&
+                     option.label.trim().length > 0;
+      
+      if (!isValid) {
+        console.error('SalesAnalytics - Invalid date range option:', option);
+      }
+      return isValid;
+    });
+    
+    console.log('SalesAnalytics - Valid dateRangeOptions:', validOptions);
+    return validOptions;
+  }, []);
 
-  const safeDateRange = dateRange && dateRange.trim() ? dateRange : 'today';
+  const safeDateRange = React.useMemo(() => {
+    const safe = dateRange && dateRange.trim() && dateRange.trim().length > 0 ? dateRange.trim() : 'today';
+    console.log('SalesAnalytics - safeDateRange:', safe);
+    return safe;
+  }, [dateRange]);
 
   if (loading) {
     return (
@@ -65,11 +89,22 @@ const SalesAnalytics = () => {
               <SelectValue placeholder="Select date range" />
             </SelectTrigger>
             <SelectContent>
-              {dateRangeOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
+              {dateRangeOptions.map((option) => {
+                // Final safety check before rendering
+                if (!option.value || option.value.trim() === '' || option.value.trim().length === 0) {
+                  console.error('SalesAnalytics - BLOCKED empty option from rendering:', option);
+                  return null;
+                }
+                
+                const safeValue = option.value.trim();
+                console.log('SalesAnalytics - Rendering SelectItem with value:', safeValue);
+                
+                return (
+                  <SelectItem key={safeValue} value={safeValue}>
+                    {option.label}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
         </CardContent>
