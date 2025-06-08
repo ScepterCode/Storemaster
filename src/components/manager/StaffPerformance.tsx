@@ -18,19 +18,29 @@ const StaffPerformance = () => {
 
   console.log('StaffPerformance render - selectedDate:', selectedDate, 'loading:', loading);
 
-  // Calculate available dates from performance data
+  // Calculate available dates from performance data with strict validation
   const availableDates = React.useMemo(() => {
     if (!staffPerformance || !Array.isArray(staffPerformance)) {
       return [];
     }
     
-    const dates = Array.from(new Set(
-      staffPerformance
-        .map(p => p.date)
-        .filter(date => date && date.trim() !== '')
-    )).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    const validDates = staffPerformance
+      .map(p => p.date)
+      .filter(date => {
+        // Strict validation: must be non-empty string with valid date format
+        return date && 
+               typeof date === 'string' && 
+               date.trim() !== '' && 
+               date.trim().length >= 10 && // YYYY-MM-DD format
+               !isNaN(new Date(date).getTime());
+      })
+      .map(date => date.trim());
     
-    return dates;
+    const uniqueDates = Array.from(new Set(validDates))
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    
+    console.log('Available dates:', uniqueDates);
+    return uniqueDates;
   }, [staffPerformance]);
 
   // Filter performance data by selected date
@@ -85,7 +95,7 @@ const StaffPerformance = () => {
                     </SelectItem>
                   ))
                 ) : (
-                  <SelectItem value="no-data" disabled>
+                  <SelectItem value="no-data-available" disabled>
                     No performance data available
                   </SelectItem>
                 )}

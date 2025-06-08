@@ -79,7 +79,7 @@ const ReportsExport = () => {
     { value: 'product-sales', label: 'Product Sales Analysis', icon: Table },
   ];
 
-  // Get unique cashiers from staff performance data with proper validation
+  // Get unique cashiers from staff performance data with strict validation
   const availableCashiers = React.useMemo(() => {
     if (!staffPerformance || !Array.isArray(staffPerformance)) {
       return [];
@@ -88,17 +88,27 @@ const ReportsExport = () => {
     const uniqueCashiers = new Map();
     
     staffPerformance.forEach(p => {
-      if (p.cashierId && p.cashierName && 
-          p.cashierId.trim() !== '' && p.cashierName.trim() !== '' &&
-          p.cashierId !== 'unknown' && p.cashierName !== 'Unknown Cashier') {
+      // Strict validation for cashier data
+      if (p.cashierId && 
+          p.cashierName && 
+          typeof p.cashierId === 'string' &&
+          typeof p.cashierName === 'string' &&
+          p.cashierId.trim() !== '' && 
+          p.cashierName.trim() !== '' &&
+          p.cashierId !== 'unknown' && 
+          p.cashierName !== 'Unknown Cashier' &&
+          p.cashierId.length > 0 &&
+          p.cashierName.length > 0) {
         uniqueCashiers.set(p.cashierId, {
-          id: p.cashierId,
-          name: p.cashierName
+          id: p.cashierId.trim(),
+          name: p.cashierName.trim()
         });
       }
     });
     
-    return Array.from(uniqueCashiers.values());
+    const cashiers = Array.from(uniqueCashiers.values());
+    console.log('Available cashiers:', cashiers);
+    return cashiers;
   }, [staffPerformance]);
 
   if (loading) {
@@ -207,11 +217,17 @@ const ReportsExport = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all_cashiers">All Cashiers</SelectItem>
-                  {availableCashiers.map((cashier) => (
-                    <SelectItem key={cashier.id} value={cashier.id}>
-                      {cashier.name}
+                  {availableCashiers.length > 0 ? (
+                    availableCashiers.map((cashier) => (
+                      <SelectItem key={cashier.id} value={cashier.id}>
+                        {cashier.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-cashiers-available" disabled>
+                      No cashiers available
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
             </div>
