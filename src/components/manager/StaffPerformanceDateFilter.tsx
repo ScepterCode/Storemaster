@@ -16,35 +16,63 @@ const StaffPerformanceDateFilter = ({
 }: StaffPerformanceDateFilterProps) => {
   // Filter out any invalid dates with comprehensive validation
   const validDates = React.useMemo(() => {
-    if (!Array.isArray(availableDates)) return [];
+    console.log('StaffPerformanceDateFilter - Raw availableDates:', availableDates);
     
-    return availableDates.filter(date => {
+    if (!Array.isArray(availableDates)) {
+      console.log('StaffPerformanceDateFilter - availableDates is not an array');
+      return [];
+    }
+    
+    const filtered = availableDates.filter(date => {
       // Basic type and existence checks
-      if (!date || typeof date !== 'string') return false;
+      if (!date || typeof date !== 'string') {
+        console.log('StaffPerformanceDateFilter - Invalid date (not string):', date);
+        return false;
+      }
       
       // Check for empty or whitespace-only strings
       const trimmedDate = date.trim();
-      if (trimmedDate === '' || trimmedDate.length === 0) return false;
+      if (trimmedDate === '' || trimmedDate.length === 0) {
+        console.log('StaffPerformanceDateFilter - Empty date after trim:', date);
+        return false;
+      }
       
       // Check minimum length for YYYY-MM-DD format
-      if (trimmedDate.length < 10) return false;
+      if (trimmedDate.length < 10) {
+        console.log('StaffPerformanceDateFilter - Date too short:', trimmedDate);
+        return false;
+      }
       
       // Validate date format and ensure it's a valid date
       const dateObj = new Date(trimmedDate);
-      if (isNaN(dateObj.getTime())) return false;
+      if (isNaN(dateObj.getTime())) {
+        console.log('StaffPerformanceDateFilter - Invalid date object:', trimmedDate);
+        return false;
+      }
       
       // Additional check to ensure it's not an invalid date string
-      if (trimmedDate.includes('undefined') || trimmedDate.includes('null')) return false;
+      if (trimmedDate.includes('undefined') || trimmedDate.includes('null')) {
+        console.log('StaffPerformanceDateFilter - Date contains undefined/null:', trimmedDate);
+        return false;
+      }
       
       return true;
     }).map(date => date.trim());
+    
+    console.log('StaffPerformanceDateFilter - Valid dates after filtering:', filtered);
+    return filtered;
   }, [availableDates]);
 
   // Get unique and sorted dates
   const sortedUniqueDates = React.useMemo(() => {
     const uniqueDates = Array.from(new Set(validDates));
-    return uniqueDates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    const sorted = uniqueDates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    console.log('StaffPerformanceDateFilter - Final sorted dates:', sorted);
+    return sorted;
   }, [validDates]);
+
+  console.log('StaffPerformanceDateFilter - selectedDate:', selectedDate);
+  console.log('StaffPerformanceDateFilter - sortedUniqueDates:', sortedUniqueDates);
 
   return (
     <Card>
@@ -62,11 +90,19 @@ const StaffPerformanceDateFilter = ({
             </SelectTrigger>
             <SelectContent>
               {sortedUniqueDates.length > 0 ? (
-                sortedUniqueDates.map((date, index) => (
-                  <SelectItem key={`date-${index}-${date}`} value={date}>
-                    {new Date(date).toLocaleDateString()}
-                  </SelectItem>
-                ))
+                sortedUniqueDates.map((date, index) => {
+                  console.log('StaffPerformanceDateFilter - Rendering SelectItem for date:', date, 'index:', index);
+                  // Additional safety check before rendering
+                  if (!date || typeof date !== 'string' || date.trim() === '') {
+                    console.error('StaffPerformanceDateFilter - Skipping invalid date in render:', date);
+                    return null;
+                  }
+                  return (
+                    <SelectItem key={`date-${index}-${date}`} value={date}>
+                      {new Date(date).toLocaleDateString()}
+                    </SelectItem>
+                  );
+                })
               ) : (
                 <SelectItem value="no_data_available" disabled>
                   No performance data available

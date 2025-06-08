@@ -43,33 +43,56 @@ const ReportFilters = ({
 }: ReportFiltersProps) => {
   // Filter out any cashiers with empty or invalid IDs with more strict validation
   const validCashiers = React.useMemo(() => {
-    if (!Array.isArray(availableCashiers)) return [];
+    console.log('ReportFilters - Raw availableCashiers:', availableCashiers);
     
-    return availableCashiers.filter(cashier => {
+    if (!Array.isArray(availableCashiers)) {
+      console.log('ReportFilters - availableCashiers is not an array');
+      return [];
+    }
+    
+    const filtered = availableCashiers.filter(cashier => {
       // Ensure cashier object exists and has required properties
-      if (!cashier || typeof cashier !== 'object') return false;
+      if (!cashier || typeof cashier !== 'object') {
+        console.log('ReportFilters - Invalid cashier object:', cashier);
+        return false;
+      }
       
       // Validate ID
       if (!cashier.id || 
           typeof cashier.id !== 'string' || 
           cashier.id.trim() === '' ||
-          cashier.id.length === 0) return false;
+          cashier.id.length === 0) {
+        console.log('ReportFilters - Invalid cashier ID:', cashier.id);
+        return false;
+      }
       
       // Validate name
       if (!cashier.name || 
           typeof cashier.name !== 'string' || 
           cashier.name.trim() === '' ||
-          cashier.name.length === 0) return false;
+          cashier.name.length === 0) {
+        console.log('ReportFilters - Invalid cashier name:', cashier.name);
+        return false;
+      }
       
       // Additional checks for specific invalid values
       if (cashier.id === 'unknown' || 
           cashier.name === 'Unknown Cashier' ||
           cashier.id.includes('undefined') ||
-          cashier.name.includes('undefined')) return false;
+          cashier.name.includes('undefined')) {
+        console.log('ReportFilters - Filtering out unknown/undefined cashier:', cashier);
+        return false;
+      }
       
       return true;
     });
+    
+    console.log('ReportFilters - Valid cashiers after filtering:', filtered);
+    return filtered;
   }, [availableCashiers]);
+
+  console.log('ReportFilters - format:', format);
+  console.log('ReportFilters - selectedCashier:', selectedCashier);
 
   return (
     <div className="space-y-6">
@@ -143,11 +166,19 @@ const ReportFilters = ({
             <SelectContent>
               <SelectItem value="all_cashiers">All Cashiers</SelectItem>
               {validCashiers.length > 0 ? (
-                validCashiers.map((cashier) => (
-                  <SelectItem key={`cashier-${cashier.id}`} value={cashier.id}>
-                    {cashier.name}
-                  </SelectItem>
-                ))
+                validCashiers.map((cashier) => {
+                  console.log('ReportFilters - Rendering SelectItem for cashier:', cashier);
+                  // Additional safety check before rendering
+                  if (!cashier.id || typeof cashier.id !== 'string' || cashier.id.trim() === '') {
+                    console.error('ReportFilters - Skipping invalid cashier in render:', cashier);
+                    return null;
+                  }
+                  return (
+                    <SelectItem key={`cashier-${cashier.id}`} value={cashier.id}>
+                      {cashier.name}
+                    </SelectItem>
+                  );
+                })
               ) : (
                 <SelectItem value="no_cashiers_available" disabled>
                   No cashiers available
