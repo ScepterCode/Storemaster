@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -58,8 +57,8 @@ export const useManagerData = () => {
           allSales.push(...sales.map((sale: any) => ({
             id: sale.id || `transaction-${Date.now()}-${Math.random()}`,
             transactionId: sale.transactionId || `TXN-${Date.now()}`,
-            cashierId: sale.cashierId && sale.cashierId.trim() !== '' ? sale.cashierId.trim() : 'unknown',
-            cashierName: sale.cashierName && sale.cashierName.trim() !== '' ? sale.cashierName.trim() : 'Unknown Cashier',
+            cashierId: validateStringValue(sale.cashierId, 'cashier1'),
+            cashierName: validateStringValue(sale.cashierName, 'Cashier 1'),
             timestamp: sale.timestamp,
             items: sale.items || [],
             subtotal: sale.subtotal || 0,
@@ -80,6 +79,15 @@ export const useManagerData = () => {
     return allSales.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   };
 
+  // Helper function to validate string values and ensure they're never empty
+  const validateStringValue = (value: any, fallback: string): string => {
+    if (!value || typeof value !== 'string' || value.trim() === '' || value.trim().length === 0) {
+      console.log(`validateStringValue: Invalid value "${value}", using fallback "${fallback}"`);
+      return fallback;
+    }
+    return value.trim();
+  };
+
   const determinePaymentMethod = (payments: any[]): 'cash' | 'card' | 'transfer' | 'wallet' | 'split' => {
     if (!payments || payments.length === 0) return 'cash';
     if (payments.length > 1) return 'split';
@@ -91,8 +99,13 @@ export const useManagerData = () => {
     const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
     const cashierMap = new Map<string, CashierPerformance>();
     
-    // Process transactions for both today and yesterday
-    [today, yesterday].forEach(date => {
+    // Ensure we always have valid dates
+    const validDates = [today, yesterday].filter(date => 
+      date && date.length === 10 && !isNaN(new Date(date).getTime())
+    );
+    
+    // Process transactions for valid dates only
+    validDates.forEach(date => {
       const dayTransactions = transactions.filter(t => {
         const transactionDate = new Date(t.timestamp).toISOString().split('T')[0];
         return transactionDate === date &&
@@ -105,13 +118,18 @@ export const useManagerData = () => {
       });
       
       dayTransactions.forEach(transaction => {
-        const key = `${transaction.cashierId.trim()}-${date}`;
+        // Extra validation to ensure no empty strings
+        const validCashierId = validateStringValue(transaction.cashierId, 'cashier1');
+        const validCashierName = validateStringValue(transaction.cashierName, 'Cashier 1');
+        const validDate = validateStringValue(date, today);
+        
+        const key = `${validCashierId}-${validDate}`;
         
         if (!cashierMap.has(key)) {
           cashierMap.set(key, {
-            cashierId: transaction.cashierId.trim(),
-            cashierName: transaction.cashierName.trim(),
-            date: date,
+            cashierId: validCashierId,
+            cashierName: validCashierName,
+            date: validDate,
             totalSales: 0,
             transactionCount: 0,
             averageTransactionValue: 0,
@@ -137,7 +155,18 @@ export const useManagerData = () => {
       performance.averageTransactionValue = performance.totalSales / (performance.transactionCount || 1);
     });
     
-    return Array.from(cashierMap.values());
+    const result = Array.from(cashierMap.values());
+    console.log('generateStaffPerformance: Final result:', result);
+    
+    // Final validation - ensure no empty strings in the result
+    return result.filter(perf => 
+      perf.cashierId && 
+      perf.cashierId.trim() !== '' && 
+      perf.cashierName && 
+      perf.cashierName.trim() !== '' &&
+      perf.date && 
+      perf.date.trim() !== ''
+    );
   };
 
   const generateSalesAnalytics = (transactions: StaffTransaction[]): SalesAnalytics => {
