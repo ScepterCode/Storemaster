@@ -33,23 +33,13 @@ const SalesAnalytics = () => {
     }));
   }, [salesAnalytics]);
 
-  const dateRangeOptions = [
+  // Static date range options with guaranteed valid values
+  const dateRangeOptions = React.useMemo(() => [
     { value: 'today', label: 'Today' },
     { value: 'yesterday', label: 'Yesterday' },
     { value: 'week', label: 'This Week' },
     { value: 'month', label: 'This Month' }
-  ];
-
-  // Filter out any invalid options (should not happen with static data, but being safe)
-  const validDateRangeOptions = dateRangeOptions.filter(option => 
-    option && 
-    option.value && 
-    typeof option.value === 'string' && 
-    option.value.trim() !== '' &&
-    option.label &&
-    typeof option.label === 'string' &&
-    option.label.trim() !== ''
-  );
+  ], []);
 
   if (loading) {
     return (
@@ -71,13 +61,13 @@ const SalesAnalytics = () => {
           <CardTitle>Sales Analytics</CardTitle>
         </CardHeader>
         <CardContent>
-          <Select value={dateRange} onValueChange={setDateRange}>
+          <Select value={dateRange || 'today'} onValueChange={setDateRange}>
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Select date range" />
             </SelectTrigger>
             <SelectContent>
-              {validDateRangeOptions.map(option => (
-                <SelectItem key={option.value} value={option.value}>
+              {dateRangeOptions.map(option => (
+                <SelectItem key={`range-${option.value}`} value={option.value}>
                   {option.label}
                 </SelectItem>
               ))}

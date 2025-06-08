@@ -56,16 +56,16 @@ export const useManagerData = () => {
         try {
           const sales = JSON.parse(localStorage.getItem(key) || '[]');
           allSales.push(...sales.map((sale: any) => ({
-            id: sale.id,
-            transactionId: sale.transactionId,
-            cashierId: sale.cashierId || 'unknown',
-            cashierName: sale.cashierName || 'Unknown Cashier',
+            id: sale.id || `transaction-${Date.now()}-${Math.random()}`,
+            transactionId: sale.transactionId || `TXN-${Date.now()}`,
+            cashierId: sale.cashierId && sale.cashierId.trim() !== '' ? sale.cashierId.trim() : 'unknown',
+            cashierName: sale.cashierName && sale.cashierName.trim() !== '' ? sale.cashierName.trim() : 'Unknown Cashier',
             timestamp: sale.timestamp,
-            items: sale.items,
-            subtotal: sale.subtotal,
-            discountAmount: sale.discountAmount,
-            taxAmount: sale.taxAmount,
-            total: sale.total,
+            items: sale.items || [],
+            subtotal: sale.subtotal || 0,
+            discountAmount: sale.discountAmount || 0,
+            taxAmount: sale.taxAmount || 0,
+            total: sale.total || 0,
             paymentMethod: determinePaymentMethod(sale.payments),
             customer: sale.customer,
             refunded: sale.status === 'refunded',
@@ -93,21 +93,24 @@ export const useManagerData = () => {
     
     // Process transactions for both today and yesterday
     [today, yesterday].forEach(date => {
-      const dayTransactions = transactions.filter(t => 
-        new Date(t.timestamp).toISOString().split('T')[0] === date &&
-        t.cashierId &&
-        t.cashierId !== 'unknown' &&
-        t.cashierName &&
-        t.cashierName !== 'Unknown Cashier'
-      );
+      const dayTransactions = transactions.filter(t => {
+        const transactionDate = new Date(t.timestamp).toISOString().split('T')[0];
+        return transactionDate === date &&
+               t.cashierId &&
+               t.cashierId.trim() !== '' &&
+               t.cashierId !== 'unknown' &&
+               t.cashierName &&
+               t.cashierName.trim() !== '' &&
+               t.cashierName !== 'Unknown Cashier';
+      });
       
       dayTransactions.forEach(transaction => {
-        const key = `${transaction.cashierId}-${date}`;
+        const key = `${transaction.cashierId.trim()}-${date}`;
         
         if (!cashierMap.has(key)) {
           cashierMap.set(key, {
-            cashierId: transaction.cashierId,
-            cashierName: transaction.cashierName,
+            cashierId: transaction.cashierId.trim(),
+            cashierName: transaction.cashierName.trim(),
             date: date,
             totalSales: 0,
             transactionCount: 0,

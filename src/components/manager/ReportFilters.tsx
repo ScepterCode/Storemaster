@@ -41,16 +41,35 @@ const ReportFilters = ({
   onIncludeRefundedChange,
   onCashierChange
 }: ReportFiltersProps) => {
-  // Filter out any cashiers with empty or invalid IDs
-  const validCashiers = availableCashiers.filter(cashier => 
-    cashier && 
-    cashier.id && 
-    typeof cashier.id === 'string' && 
-    cashier.id.trim() !== '' &&
-    cashier.name &&
-    typeof cashier.name === 'string' &&
-    cashier.name.trim() !== ''
-  );
+  // Filter out any cashiers with empty or invalid IDs with more strict validation
+  const validCashiers = React.useMemo(() => {
+    if (!Array.isArray(availableCashiers)) return [];
+    
+    return availableCashiers.filter(cashier => {
+      // Ensure cashier object exists and has required properties
+      if (!cashier || typeof cashier !== 'object') return false;
+      
+      // Validate ID
+      if (!cashier.id || 
+          typeof cashier.id !== 'string' || 
+          cashier.id.trim() === '' ||
+          cashier.id.length === 0) return false;
+      
+      // Validate name
+      if (!cashier.name || 
+          typeof cashier.name !== 'string' || 
+          cashier.name.trim() === '' ||
+          cashier.name.length === 0) return false;
+      
+      // Additional checks for specific invalid values
+      if (cashier.id === 'unknown' || 
+          cashier.name === 'Unknown Cashier' ||
+          cashier.id.includes('undefined') ||
+          cashier.name.includes('undefined')) return false;
+      
+      return true;
+    });
+  }, [availableCashiers]);
 
   return (
     <div className="space-y-6">
@@ -79,7 +98,7 @@ const ReportFilters = ({
       {/* Format Selection */}
       <div className="space-y-2">
         <Label>Export Format</Label>
-        <Select value={format} onValueChange={onFormatChange}>
+        <Select value={format || 'csv'} onValueChange={onFormatChange}>
           <SelectTrigger className="w-48">
             <SelectValue placeholder="Select format" />
           </SelectTrigger>
@@ -117,7 +136,7 @@ const ReportFilters = ({
 
         <div className="space-y-2">
           <Label>Specific Cashiers (optional)</Label>
-          <Select value={selectedCashier} onValueChange={onCashierChange}>
+          <Select value={selectedCashier || 'all_cashiers'} onValueChange={onCashierChange}>
             <SelectTrigger>
               <SelectValue placeholder="Select cashier" />
             </SelectTrigger>
@@ -125,7 +144,7 @@ const ReportFilters = ({
               <SelectItem value="all_cashiers">All Cashiers</SelectItem>
               {validCashiers.length > 0 ? (
                 validCashiers.map((cashier) => (
-                  <SelectItem key={cashier.id} value={cashier.id}>
+                  <SelectItem key={`cashier-${cashier.id}`} value={cashier.id}>
                     {cashier.name}
                   </SelectItem>
                 ))
