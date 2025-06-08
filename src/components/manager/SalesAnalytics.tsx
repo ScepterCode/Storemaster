@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -9,8 +10,6 @@ import { formatCurrency } from '@/lib/formatter';
 const SalesAnalytics = () => {
   const [dateRange, setDateRange] = useState('today');
   const { salesAnalytics, loading } = useManagerData();
-
-  console.log('SalesAnalytics render - dateRange:', dateRange, 'loading:', loading);
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
@@ -32,7 +31,6 @@ const SalesAnalytics = () => {
     }));
   }, [salesAnalytics]);
 
-  // Static date range options - guaranteed to be valid
   const dateRangeOptions = [
     { value: 'today', label: 'Today' },
     { value: 'yesterday', label: 'Yesterday' },
@@ -40,11 +38,7 @@ const SalesAnalytics = () => {
     { value: 'month', label: 'This Month' }
   ];
 
-  const safeDateRange = React.useMemo(() => {
-    const safe = (dateRange && dateRange.trim()) || 'today';
-    console.log('SalesAnalytics - safeDateRange:', safe);
-    return safe;
-  }, [dateRange]);
+  const safeDateRange = dateRange && dateRange.trim() ? dateRange : 'today';
 
   if (loading) {
     return (
@@ -71,23 +65,11 @@ const SalesAnalytics = () => {
               <SelectValue placeholder="Select date range" />
             </SelectTrigger>
             <SelectContent>
-              {dateRangeOptions.map((option, index) => {
-                // Bulletproof validation for date range values
-                const finalValue = (option.value && option.value.trim()) || `range-${index}`;
-                
-                console.log(`SalesAnalytics - DateRange SelectItem ${index}: originalValue="${option.value}", finalValue="${finalValue}"`);
-                
-                if (!finalValue || finalValue.trim() === '') {
-                  console.error('SalesAnalytics - CRITICAL: Empty range value detected, skipping');
-                  return null;
-                }
-                
-                return (
-                  <SelectItem key={`range-${index}-${Date.now()}`} value={finalValue}>
-                    {option.label}
-                  </SelectItem>
-                );
-              })}
+              {dateRangeOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </CardContent>

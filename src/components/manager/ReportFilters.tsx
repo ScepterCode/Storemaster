@@ -48,42 +48,28 @@ const ReportFilters = ({
   ];
 
   const validCashiers = React.useMemo(() => {
-    console.log('ReportFilters - Raw availableCashiers:', availableCashiers);
-    
     if (!Array.isArray(availableCashiers)) {
-      console.log('ReportFilters - availableCashiers is not an array');
       return [];
     }
     
-    const processed = availableCashiers
-      .filter(cashier => {
-        const isValid = cashier && 
-                        typeof cashier === 'object' && 
-                        cashier.id && 
-                        typeof cashier.id === 'string' && 
-                        cashier.id.trim() !== '' &&
-                        cashier.name && 
-                        typeof cashier.name === 'string' && 
-                        cashier.name.trim() !== '';
-        
-        if (!isValid) {
-          console.log('ReportFilters - Invalid cashier filtered out:', cashier);
-        }
-        return isValid;
-      })
+    return availableCashiers
+      .filter(cashier => 
+        cashier && 
+        cashier.id && 
+        cashier.name && 
+        typeof cashier.id === 'string' && 
+        typeof cashier.name === 'string' &&
+        cashier.id.trim() !== '' &&
+        cashier.name.trim() !== ''
+      )
       .map(cashier => ({
         id: cashier.id.trim(),
         name: cashier.name.trim()
       }));
-    
-    console.log('ReportFilters - Final validCashiers:', processed);
-    return processed;
   }, [availableCashiers]);
 
   const safeFormat = format && format.trim() ? format : 'csv';
   const safeCashierValue = selectedCashier && selectedCashier.trim() ? selectedCashier : 'all_cashiers';
-
-  console.log('ReportFilters - safeFormat:', safeFormat, 'safeCashierValue:', safeCashierValue);
 
   return (
     <div className="space-y-6">
@@ -117,23 +103,11 @@ const ReportFilters = ({
             <SelectValue placeholder="Select format" />
           </SelectTrigger>
           <SelectContent>
-            {formatOptions.map((option, index) => {
-              // Bulletproof validation for format options
-              const finalValue = (option.value && option.value.trim()) || `format-${index}`;
-              
-              console.log(`ReportFilters - Format SelectItem ${index}: originalValue="${option.value}", finalValue="${finalValue}"`);
-              
-              if (!finalValue || finalValue.trim() === '') {
-                console.error('ReportFilters - CRITICAL: Empty format value detected, skipping');
-                return null;
-              }
-              
-              return (
-                <SelectItem key={`format-${index}-${Date.now()}`} value={finalValue}>
-                  {option.label}
-                </SelectItem>
-              );
-            })}
+            {formatOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -170,23 +144,11 @@ const ReportFilters = ({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all_cashiers">All Cashiers</SelectItem>
-              {validCashiers.map((cashier, index) => {
-                // Bulletproof validation for cashier IDs
-                const finalValue = (cashier.id && cashier.id.trim()) || `cashier-${index}-${Date.now()}`;
-                
-                console.log(`ReportFilters - Cashier SelectItem ${index}: originalId="${cashier.id}", finalValue="${finalValue}"`);
-                
-                if (!finalValue || finalValue.trim() === '') {
-                  console.error('ReportFilters - CRITICAL: Empty cashier value detected, skipping');
-                  return null;
-                }
-                
-                return (
-                  <SelectItem key={`cashier-${index}-${Date.now()}`} value={finalValue}>
-                    {cashier.name}
-                  </SelectItem>
-                );
-              })}
+              {validCashiers.map((cashier) => (
+                <SelectItem key={cashier.id} value={cashier.id}>
+                  {cashier.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
