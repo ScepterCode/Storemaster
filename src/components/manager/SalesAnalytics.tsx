@@ -78,15 +78,15 @@ const SalesAnalytics = () => {
             </SelectTrigger>
             <SelectContent>
               {safeDateRangeOptions.map((option, index) => {
-                // Triple-check each value before rendering
-                const finalValue = option.value && option.value.trim() !== '' 
+                // Ensure value is never empty
+                const safeValue = option.value && option.value.trim() !== '' 
                   ? option.value 
-                  : `range-${index}-${Date.now()}`;
+                  : `safe-range-${index}`;
                 
-                console.log('SalesAnalytics - Rendering SelectItem with value:', finalValue);
+                console.log('SalesAnalytics - Rendering SelectItem with value:', safeValue);
                 
                 return (
-                  <SelectItem key={`range-${index}`} value={finalValue}>
+                  <SelectItem key={`range-${index}`} value={safeValue}>
                     {option.label}
                   </SelectItem>
                 );
@@ -247,7 +247,7 @@ const SalesAnalytics = () => {
             )}
           </div>
         </CardContent>
-      </div>
+      </Card>
     </div>
   );
 };
