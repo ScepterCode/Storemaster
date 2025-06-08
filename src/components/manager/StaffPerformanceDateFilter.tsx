@@ -14,36 +14,40 @@ const StaffPerformanceDateFilter = ({
   onDateChange, 
   availableDates 
 }: StaffPerformanceDateFilterProps) => {
-  // Default fallback date
   const defaultDate = new Date().toISOString().split('T')[0];
 
-  // Process available dates with bulletproof validation
   const validDates = React.useMemo(() => {
+    console.log('StaffPerformanceDateFilter - Raw availableDates:', availableDates);
+    
     if (!Array.isArray(availableDates) || availableDates.length === 0) {
+      console.log('StaffPerformanceDateFilter - Using default date');
       return [defaultDate];
     }
     
-    const filtered = availableDates
-      .filter(date => date && typeof date === 'string' && date.trim().length >= 8)
-      .map(date => date.trim())
+    const processed = availableDates
       .filter(date => {
-        try {
-          const dateObj = new Date(date);
-          return !isNaN(dateObj.getTime());
-        } catch {
-          return false;
+        const isValid = date && 
+                       typeof date === 'string' && 
+                       date.trim().length >= 10 && 
+                       !isNaN(new Date(date).getTime());
+        if (!isValid) {
+          console.log('StaffPerformanceDateFilter - Invalid date filtered out:', date);
         }
-      });
+        return isValid;
+      })
+      .map(date => date.trim());
     
-    return filtered.length > 0 ? filtered : [defaultDate];
+    const uniqueDates = Array.from(new Set(processed))
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    
+    console.log('StaffPerformanceDateFilter - Final validDates:', uniqueDates);
+    return uniqueDates.length > 0 ? uniqueDates : [defaultDate];
   }, [availableDates, defaultDate]);
 
-  // Ensure selected date is valid
   const safeSelectedDate = React.useMemo(() => {
-    if (!selectedDate || typeof selectedDate !== 'string' || selectedDate.trim() === '') {
-      return validDates[0];
-    }
-    return selectedDate;
+    const safe = selectedDate && selectedDate.trim() ? selectedDate : validDates[0];
+    console.log('StaffPerformanceDateFilter - safeSelectedDate:', safe);
+    return safe;
   }, [selectedDate, validDates]);
 
   return (
@@ -62,11 +66,19 @@ const StaffPerformanceDateFilter = ({
             </SelectTrigger>
             <SelectContent>
               {validDates.map((date, index) => {
-                // Final safety check - ensure value is never empty
-                const safeValue = date && date.trim() ? date.trim() : `date-${index}-${Date.now()}`;
+                // Final bulletproof validation - absolutely no empty strings
+                const finalValue = (date && date.trim()) || `fallback-date-${index}-${Date.now()}`;
+                
+                console.log(`StaffPerformanceDateFilter - SelectItem ${index}: originalDate="${date}", finalValue="${finalValue}"`);
+                
+                // Double check - if somehow still empty, skip this item entirely
+                if (!finalValue || finalValue.trim() === '') {
+                  console.error('StaffPerformanceDateFilter - CRITICAL: Empty value detected, skipping item');
+                  return null;
+                }
                 
                 return (
-                  <SelectItem key={`date-${index}`} value={safeValue}>
+                  <SelectItem key={`date-${index}-${Date.now()}`} value={finalValue}>
                     {(() => {
                       try {
                         return new Date(date).toLocaleDateString();
