@@ -17,14 +17,14 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
-import { usePermissions } from '@/hooks/usePermissions';
+import { usePermissions, Permission } from '@/hooks/usePermissions'; // Import Permission type
 
 interface SidebarNavigationItem {
   label: string;
   icon: React.ReactNode;
   href: string;
   active?: boolean;
-  permission?: string;
+  permission?: Permission; // Use the imported Permission type
 }
 
 interface SidebarProps {
@@ -114,7 +114,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }: SidebarProps) => {
       if (!item.permission) return true;
       
       // Show item if user has permission
-      return hasPermission(item.permission as any);
+      return hasPermission(item.permission); // Remove 'as any'
     });
   }, [navigationItems, hasPermission, loading]);
 

@@ -6,24 +6,40 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { useNotifications } from '@/contexts/NotificationContext';
+import { useNotifications, NotificationSettings } from '@/contexts/NotificationContext'; // Import NotificationSettings
 import { toast } from 'sonner';
+
+// Define a type for the top-level boolean setting keys
+type TopLevelBooleanSettingsKey = Extract<keyof NotificationSettings, 'enablePush' | 'enableEmail' | 'enableInApp' | 'soundEnabled'>;
 
 const NotificationSettings = () => {
   const { settings, updateSettings, addNotification } = useNotifications();
 
-  const handleSettingChange = (key: string, value: any) => {
+  const handleSettingChange = (key: TopLevelBooleanSettingsKey, value: boolean) => { // Updated signature
     updateSettings({ [key]: value });
     toast.success('Notification settings updated');
   };
 
-  const handleQuietHoursChange = (key: string, value: any) => {
+  // Old handleQuietHoursChange is removed.
+
+  const handleQuietHoursEnabledChange = (enabled: boolean) => {
+    updateSettings({
+      quietHours: {
+        ...settings.quietHours,
+        enabled: enabled,
+      },
+    });
+    toast.success('Quiet hours settings updated');
+  };
+
+  const handleQuietHoursTimeChange = (key: 'start' | 'end', value: string) => {
     updateSettings({
       quietHours: {
         ...settings.quietHours,
         [key]: value,
       },
     });
+    toast.success('Quiet hours settings updated');
   };
 
   const sendTestNotification = () => {
@@ -127,7 +143,7 @@ const NotificationSettings = () => {
             <Switch
               id="quiet-hours"
               checked={settings.quietHours.enabled}
-              onCheckedChange={(checked) => handleQuietHoursChange('enabled', checked)}
+              onCheckedChange={handleQuietHoursEnabledChange} // Updated handler
             />
           </div>
 
@@ -139,7 +155,7 @@ const NotificationSettings = () => {
                   id="quiet-start"
                   type="time"
                   value={settings.quietHours.start}
-                  onChange={(e) => handleQuietHoursChange('start', e.target.value)}
+                  onChange={(e) => handleQuietHoursTimeChange('start', e.target.value)} // Updated handler
                 />
               </div>
               <div className="space-y-2">
@@ -148,7 +164,7 @@ const NotificationSettings = () => {
                   id="quiet-end"
                   type="time"
                   value={settings.quietHours.end}
-                  onChange={(e) => handleQuietHoursChange('end', e.target.value)}
+                  onChange={(e) => handleQuietHoursTimeChange('end', e.target.value)} // Updated handler
                 />
               </div>
             </div>

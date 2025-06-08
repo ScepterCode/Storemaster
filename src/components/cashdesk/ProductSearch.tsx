@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Search, BarChart3, Plus } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
+import { Product } from '@/types'; // Import Product type
 import { BarcodeProduct, SaleItem } from '@/types/cashdesk';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -39,7 +40,7 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ onAddItem }) => {
     setSearchTerm(value);
   };
 
-  const handleAddProduct = (product: any) => {
+  const handleAddProduct = (product: Product) => { // Use Product type
     if (product.quantity <= 0) {
       toast({
         title: "Out of Stock",

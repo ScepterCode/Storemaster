@@ -65,22 +65,23 @@ const TransactionMonitor = () => {
               />
             </div>
             
-            <Select onValueChange={(value) => setFilters({ ...filters, cashierId: value })}>
+            <Select onValueChange={(value) => setFilters({ ...filters, cashierId: value === 'all' ? undefined : value })}>
               <SelectTrigger>
                 <SelectValue placeholder="All Cashiers" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Cashiers</SelectItem>
+                <SelectItem value="all">All Cashiers</SelectItem>
+                <SelectItem value="loading-cashiers" disabled>Loading cashiers...</SelectItem>
                 {/* Add cashier options */}
               </SelectContent>
             </Select>
 
-            <Select onValueChange={(value) => setFilters({ ...filters, paymentMethod: value })}>
+            <Select onValueChange={(value) => setFilters({ ...filters, paymentMethod: value === 'all' ? undefined : value })}>
               <SelectTrigger>
                 <SelectValue placeholder="Payment Method" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Methods</SelectItem>
+                <SelectItem value="all">All Methods</SelectItem>
                 <SelectItem value="cash">Cash</SelectItem>
                 <SelectItem value="card">Card</SelectItem>
                 <SelectItem value="transfer">Transfer</SelectItem>
