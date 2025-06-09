@@ -12,14 +12,9 @@ import { Search, RefreshCw, Package, LogIn } from 'lucide-react';
 const StockPage: React.FC = () => {
   const { products, categories, loading, refreshStock, calculateCategoryTotal, calculateTotalInventoryValue } = useStock();
   const [searchQuery, setSearchQuery] = React.useState('');
-  const { user } = useAuth();
-  
-  // Redirect to login if not authenticated
-  if (!user) {
-    return <Navigate to="/" />;
-  }
+  const { user } = useAuth(); // Hook call
 
-  // Group products by category
+  // Group products by category - HOOK CALL (useMemo)
   const productsByCategory = useMemo(() => {
     const grouped: Record<string, typeof products> = {};
     
@@ -44,6 +39,13 @@ const StockPage: React.FC = () => {
     
     return grouped;
   }, [products, categories, searchQuery]);
+
+  // All other hook calls should be above this line.
+
+  // Redirect to login if not authenticated - CONDITIONAL RETURN MOVED HERE
+  if (!user) {
+    return <Navigate to="/" />;
+  }
 
   // Format currency
   const formatCurrency = (amount: number) => {

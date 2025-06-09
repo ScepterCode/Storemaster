@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Product, Category } from '@/types';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { getProductsFromStorage } from '@/services/productService'; // Import for local storage
 
 export const useStock = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -58,6 +59,7 @@ export const useStock = () => {
         synced: true,
       }));
 
+      // This is the correct mappedCategories
       const mappedCategories: Category[] = categoriesData.map(category => ({
         id: category.id,
         name: category.name,
@@ -65,8 +67,34 @@ export const useStock = () => {
         synced: true,
       }));
 
-      setProducts(mappedProducts);
-      setCategories(mappedCategories);
+      // Get products from local storage
+      const localProducts: Product[] = getProductsFromStorage();
+
+      const productMap = new Map<string, Product>();
+
+      // Add local products to the map first
+      if (Array.isArray(localProducts)) {
+          localProducts.forEach(product => {
+              productMap.set(product.id, { ...product, synced: product.synced || false }); // Ensure synced status, default to false
+          });
+      }
+
+      // Add API products to the map, overwriting local ones if IDs match,
+      // as API data is the source of truth for synced items.
+      if (Array.isArray(mappedProducts)) { // mappedProducts is from the API call (renamed from mappedApiProducts for consistency)
+          mappedProducts.forEach(product => {
+              productMap.set(product.id, { ...product, synced: true }); // API products are synced
+          });
+      }
+
+      const mergedProducts = Array.from(productMap.values());
+
+      // Sort the merged products by name
+      mergedProducts.sort((a, b) => a.name.localeCompare(b.name));
+
+      // Ensure the correct mappedCategories is used here
+      setProducts(mergedProducts); // Use merged products
+      setCategories(mappedCategories); // This should refer to the correctly defined mappedCategories
     } catch (err) {
       console.error('Error fetching inventory:', err);
       setError(err instanceof Error ? err : new Error('Unknown error fetching inventory'));

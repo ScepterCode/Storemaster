@@ -66,10 +66,10 @@ export const useProducts = () => {
   };
 
   const handleAddProduct = async () => {
-    if (!newProduct.name || !newProduct.unitPrice) {
+    if (!newProduct.name || !newProduct.unitPrice || !newProduct.category) { // Added !newProduct.category
       toast({
         title: "Error",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields, including product name, unit price, and category.", // Updated message
         variant: "destructive",
       });
       return;
@@ -88,25 +88,37 @@ export const useProducts = () => {
         synced: false,
       };
 
+      console.log('[useProducts] Attempting to add product. Current user:', user);
+      console.log('[useProducts] Product data to be processed:', product);
+
       // If user is authenticated, store in Supabase
-      if (user) {
+      if (user && user.id) { // More explicit check
         try {
+          console.log('[useProducts] Calling addProductToAPI with userId:', user.id, 'and product:', product);
           const syncedProduct = await addProductToAPI(product, user.id);
           product.synced = syncedProduct.synced;
           
           toast({
             title: "Success",
-            description: "Product added successfully",
+            description: "Product added successfully to API.", // Clarify API success
             variant: "default",
           });
         } catch (err) {
           console.error('Error saving product to Supabase:', err);
           toast({
             title: "Sync Error",
-            description: "Product saved locally but failed to sync",
+            description: "Product saved locally but failed to sync to API.", // Clarify API sync failure
             variant: "destructive",
           });
         }
+      } else {
+        console.error('[useProducts] User not authenticated or user.id missing. Cannot save product to API. Product will be saved locally only.');
+        toast({
+          title: "Authentication Issue",
+          description: "You are not fully logged in. Product saved locally only.",
+          variant: "warning",
+        });
+        // The product is already marked as synced: false by default
       }
 
       // Also save to local storage as backup

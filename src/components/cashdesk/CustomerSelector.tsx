@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Search, Plus, User } from 'lucide-react';
 import { useCustomers } from '@/hooks/useCustomers';
 import { SaleCustomer } from '@/types/cashdesk';
+import { Customer } from '@/types'; // Import Customer type
 
 interface CustomerSelectorProps {
   onSelectCustomer: (customer: SaleCustomer) => void;
@@ -34,7 +35,7 @@ const CustomerSelector: React.FC<CustomerSelectorProps> = ({ onSelectCustomer, o
     onSelectCustomer({ isWalkIn: true });
   };
 
-  const handleSelectExisting = (customer: any) => {
+  const handleSelectExisting = (customer: Customer) => { // Use Customer type
     onSelectCustomer({
       id: customer.id,
       name: customer.name,

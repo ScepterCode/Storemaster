@@ -62,7 +62,7 @@ const ProductDialog = ({
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="category">Category</Label>
+            <Label htmlFor="category">Category <span className="text-destructive">*</span></Label>
             <Select 
               value={newProduct.category || ''} 
               onValueChange={(value) => setNewProduct({ ...newProduct, category: value })}
@@ -90,7 +90,12 @@ const ProductDialog = ({
         </div>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={handleAddProduct}>Save Product</Button>
+          <Button
+            onClick={handleAddProduct}
+            disabled={!newProduct.name || !newProduct.unitPrice || !newProduct.category}
+          >
+            Save Product
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
