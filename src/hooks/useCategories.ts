@@ -84,25 +84,37 @@ export const useCategories = () => {
         synced: false,
       };
 
+      console.log('[useCategories] Attempting to add category. Current user:', user);
+      console.log('[useCategories] Category data to be processed:', category);
+
       // If user is authenticated, store in Supabase
-      if (user) {
+      if (user && user.id) { // More explicit check
         try {
+          console.log('[useCategories] Calling addCategoryToAPI with userId:', user.id, 'and category:', category);
           const syncedCategory = await addCategoryToAPI(category, user.id);
           category.synced = syncedCategory.synced;
           
           toast({
             title: "Success",
-            description: "Category added successfully",
+            description: "Category added successfully to API.", // Clarify API success
             variant: "default",
           });
         } catch (err) {
           console.error('Error saving category to Supabase:', err);
           toast({
             title: "Sync Error",
-            description: "Category saved locally but failed to sync",
+            description: "Category saved locally but failed to sync to API.", // Clarify API sync failure
             variant: "destructive",
           });
         }
+      } else {
+        console.error('[useCategories] User not authenticated or user.id missing. Cannot save category to API. Category will be saved locally only.');
+        toast({
+          title: "Authentication Issue",
+          description: "You are not fully logged in. Category saved locally only.",
+          variant: "warning",
+        });
+        // The category is already marked as synced: false by default
       }
 
       // Add to local storage
