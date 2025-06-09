@@ -1,45 +1,75 @@
-
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Filter, Download, RefreshCw } from 'lucide-react';
-import { StaffTransaction, ManagerOverviewFilters } from '@/types/manager';
-import { useManagerData } from '@/hooks/useManagerData';
-import { formatCurrency } from '@/lib/formatter';
+import React, { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Search, Filter, Download, RefreshCw } from "lucide-react";
+import { StaffTransaction, ManagerOverviewFilters } from "@/types/manager";
+import { useManagerData } from "@/hooks/useManagerData";
+import { formatCurrency } from "@/lib/formatter";
 
 const TransactionMonitor = () => {
   const [filters, setFilters] = useState<ManagerOverviewFilters>({});
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const { transactions, loading, refreshTransactions } = useManagerData();
 
-  const filteredTransactions = transactions.filter(transaction => {
-    if (searchTerm && !transaction.transactionId.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        !transaction.cashierName.toLowerCase().includes(searchTerm.toLowerCase())) {
+  const filteredTransactions = transactions.filter((transaction) => {
+    if (
+      searchTerm &&
+      !transaction.transactionId
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) &&
+      !transaction.cashierName.toLowerCase().includes(searchTerm.toLowerCase())
+    ) {
       return false;
     }
-    
-    if (filters.cashierId && transaction.cashierId !== filters.cashierId) return false;
-    if (filters.paymentMethod && transaction.paymentMethod !== filters.paymentMethod) return false;
-    if (filters.minAmount && transaction.total < filters.minAmount) return false;
-    if (filters.maxAmount && transaction.total > filters.maxAmount) return false;
+
+    if (filters.cashierId && transaction.cashierId !== filters.cashierId)
+      return false;
+    if (
+      filters.paymentMethod &&
+      transaction.paymentMethod !== filters.paymentMethod
+    )
+      return false;
+    if (filters.minAmount && transaction.total < filters.minAmount)
+      return false;
+    if (filters.maxAmount && transaction.total > filters.maxAmount)
+      return false;
     if (!filters.includeRefunded && transaction.refunded) return false;
     if (!filters.includeVoided && transaction.voided) return false;
-    
+
     return true;
   });
 
   const getPaymentMethodColor = (method: string) => {
     switch (method) {
-      case 'cash': return 'bg-green-100 text-green-800';
-      case 'card': return 'bg-blue-100 text-blue-800';
-      case 'transfer': return 'bg-purple-100 text-purple-800';
-      case 'wallet': return 'bg-orange-100 text-orange-800';
-      case 'split': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case "cash":
+        return "bg-green-100 text-green-800";
+      case "card":
+        return "bg-blue-100 text-blue-800";
+      case "transfer":
+        return "bg-purple-100 text-purple-800";
+      case "wallet":
+        return "bg-orange-100 text-orange-800";
+      case "split":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -64,23 +94,37 @@ const TransactionMonitor = () => {
                 className="pl-10"
               />
             </div>
-            
-            <Select onValueChange={(value) => setFilters({ ...filters, cashierId: value })}>
+
+            <Select
+              onValueChange={(value) =>
+                setFilters({
+                  ...filters,
+                  cashierId: value === "all" ? undefined : value,
+                })
+              }
+            >
               <SelectTrigger>
                 <SelectValue placeholder="All Cashiers" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Cashiers</SelectItem>
-                {/* Add cashier options */}
+                {/* TODO: Add cashier options */}
+                <SelectItem value="all">All Cashiers</SelectItem>
               </SelectContent>
             </Select>
 
-            <Select onValueChange={(value) => setFilters({ ...filters, paymentMethod: value })}>
+            <Select
+              onValueChange={(value) =>
+                setFilters({
+                  ...filters,
+                  paymentMethod: value === "all" ? undefined : value,
+                })
+              }
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Payment Method" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Methods</SelectItem>
+                <SelectItem value="all">All Methods</SelectItem>
                 <SelectItem value="cash">Cash</SelectItem>
                 <SelectItem value="card">Card</SelectItem>
                 <SelectItem value="transfer">Transfer</SelectItem>
@@ -91,12 +135,16 @@ const TransactionMonitor = () => {
 
             <Input
               type="date"
-              onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
+              onChange={(e) =>
+                setFilters({ ...filters, dateFrom: e.target.value })
+              }
             />
 
             <Input
               type="date"
-              onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
+              onChange={(e) =>
+                setFilters({ ...filters, dateTo: e.target.value })
+              }
             />
 
             <Button onClick={refreshTransactions} variant="outline">
@@ -161,12 +209,16 @@ const TransactionMonitor = () => {
                         {formatCurrency(transaction.total)}
                       </TableCell>
                       <TableCell>
-                        <Badge className={getPaymentMethodColor(transaction.paymentMethod)}>
+                        <Badge
+                          className={getPaymentMethodColor(
+                            transaction.paymentMethod
+                          )}
+                        >
                           {transaction.paymentMethod.toUpperCase()}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {transaction.customer?.name || 'Walk-in'}
+                        {transaction.customer?.name || "Walk-in"}
                       </TableCell>
                       <TableCell>
                         {transaction.refunded && (
