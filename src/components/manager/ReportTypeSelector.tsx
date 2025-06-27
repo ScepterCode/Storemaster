@@ -1,12 +1,11 @@
-
-import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { FileText, Table, Calendar } from 'lucide-react';
+import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { FileText, Table, Calendar } from "lucide-react";
 
 interface ReportType {
   value: string;
   label: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ className?: string }>;
 }
 
 interface ReportTypeSelectorProps {
@@ -14,21 +13,24 @@ interface ReportTypeSelectorProps {
   onTypeChange: (type: string) => void;
 }
 
-const ReportTypeSelector = ({ selectedType, onTypeChange }: ReportTypeSelectorProps) => {
+const ReportTypeSelector = ({
+  selectedType,
+  onTypeChange,
+}: ReportTypeSelectorProps) => {
   const reportTypes: ReportType[] = [
-    { value: 'transactions', label: 'All Transactions', icon: FileText },
-    { value: 'staff-performance', label: 'Staff Performance', icon: Table },
-    { value: 'daily-summary', label: 'Daily Summary', icon: Calendar },
-    { value: 'product-sales', label: 'Product Sales Analysis', icon: Table },
+    { value: "transactions", label: "All Transactions", icon: FileText },
+    { value: "staff-performance", label: "Staff Performance", icon: Table },
+    { value: "daily-summary", label: "Daily Summary", icon: Calendar },
+    { value: "product-sales", label: "Product Sales Analysis", icon: Table },
   ];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {reportTypes.map(({ value, label, icon: Icon }) => (
-        <Card 
+        <Card
           key={value}
           className={`cursor-pointer transition-colors ${
-            selectedType === value ? 'ring-2 ring-primary' : 'hover:bg-muted/50'
+            selectedType === value ? "ring-2 ring-primary" : "hover:bg-muted/50"
           }`}
           onClick={() => onTypeChange(value)}
         >

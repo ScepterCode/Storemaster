@@ -1,14 +1,6 @@
-import React, { useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { BarChart3, Users, TrendingUp, FileText } from "lucide-react";
 import TransactionMonitor from "@/components/manager/TransactionMonitor";
 import StaffPerformance from "@/components/manager/StaffPerformance";

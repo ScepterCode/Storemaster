@@ -1,31 +1,29 @@
-
-import { Customer } from '@/types';
-import { supabase } from '@/integrations/supabase/client';
-import { 
-  STORAGE_KEYS, 
-  getStoredItems, 
-  storeItems, 
-  addItem, 
-  updateItem, 
-  deleteItem 
-} from '@/lib/offlineStorage';
+import { Customer } from "@/types";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  STORAGE_KEYS,
+  getStoredItems,
+  addItem,
+  updateItem,
+  deleteItem,
+} from "@/lib/offlineStorage";
 
 /**
  * Fetches customers from Supabase
  */
 export const fetchCustomersFromAPI = async (userId?: string) => {
   if (!userId) return [];
-  
+
   try {
     const { data: customersData, error: customersError } = await supabase
-      .from('customers')
-      .select('*')
-      .order('name');
-      
+      .from("customers")
+      .select("*")
+      .order("name");
+
     if (customersError) throw customersError;
-    
+
     if (customersData) {
-      return customersData.map(customer => ({
+      return customersData.map((customer) => ({
         id: customer.id,
         name: customer.name,
         phone: customer.phone || undefined,
@@ -35,10 +33,10 @@ export const fetchCustomersFromAPI = async (userId?: string) => {
       }));
     }
   } catch (error) {
-    console.error('Error fetching customers from API:', error);
+    console.error("Error fetching customers from API:", error);
     throw error;
   }
-  
+
   return [];
 };
 
@@ -47,21 +45,19 @@ export const fetchCustomersFromAPI = async (userId?: string) => {
  */
 export const addCustomerToAPI = async (customer: Customer, userId: string) => {
   try {
-    const { error } = await supabase
-      .from('customers')
-      .insert({
-        id: customer.id,
-        name: customer.name,
-        phone: customer.phone,
-        email: customer.email,
-        address: customer.address,
-        user_id: userId
-      });
-      
+    const { error } = await supabase.from("customers").insert({
+      id: customer.id,
+      name: customer.name,
+      phone: customer.phone,
+      email: customer.email,
+      address: customer.address,
+      user_id: userId,
+    });
+
     if (error) throw error;
     return { ...customer, synced: true };
   } catch (error) {
-    console.error('Error adding customer to API:', error);
+    console.error("Error adding customer to API:", error);
     throw error;
   }
 };
@@ -72,19 +68,19 @@ export const addCustomerToAPI = async (customer: Customer, userId: string) => {
 export const updateCustomerInAPI = async (customer: Customer) => {
   try {
     const { error } = await supabase
-      .from('customers')
+      .from("customers")
       .update({
         name: customer.name,
         phone: customer.phone,
         email: customer.email,
         address: customer.address,
       })
-      .eq('id', customer.id);
-      
+      .eq("id", customer.id);
+
     if (error) throw error;
     return { ...customer, synced: true };
   } catch (error) {
-    console.error('Error updating customer in API:', error);
+    console.error("Error updating customer in API:", error);
     throw error;
   }
 };
@@ -95,13 +91,13 @@ export const updateCustomerInAPI = async (customer: Customer) => {
 export const deleteCustomerFromAPI = async (customerId: string) => {
   try {
     const { error } = await supabase
-      .from('customers')
+      .from("customers")
       .delete()
-      .eq('id', customerId);
-      
+      .eq("id", customerId);
+
     if (error) throw error;
   } catch (error) {
-    console.error('Error deleting customer from API:', error);
+    console.error("Error deleting customer from API:", error);
     throw error;
   }
 };

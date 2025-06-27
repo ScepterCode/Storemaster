@@ -1,20 +1,20 @@
-
-import React, { useState } from 'react';
-import AppLayout from '@/components/layout/AppLayout';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent } from '@/components/ui/card';
-import { Plus } from 'lucide-react';
-import TransactionsList from '@/components/transactions/TransactionsList';
-import TransactionDialog from '@/components/transactions/TransactionDialog';
-import EmptyTransactionState from '@/components/transactions/EmptyTransactionState';
-import { useTransactions } from '@/hooks/useTransactions';
+import React, { useState } from "react";
+import AppLayout from "@/components/layout/AppLayout";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
+import { Plus } from "lucide-react";
+import TransactionsList from "@/components/transactions/TransactionsList";
+import TransactionDialog from "@/components/transactions/TransactionDialog";
+import EmptyTransactionState from "@/components/transactions/EmptyTransactionState";
+import { useTransactions } from "@/hooks/useTransactions";
+import { StaffTransaction } from "@/types/manager";
 
 const TransactionsPage = () => {
   const [open, setOpen] = useState(false);
   const { transactions, loading, addTransaction } = useTransactions();
 
-  const handleAddTransaction = (transaction: any) => {
+  const handleAddTransaction = (transaction: StaffTransaction) => {
     if (addTransaction(transaction)) {
       setOpen(false);
     }
@@ -26,16 +26,18 @@ const TransactionsPage = () => {
         <div className="flex justify-between items-center flex-wrap gap-4">
           <div>
             <h1 className="text-2xl font-bold">Transactions</h1>
-            <p className="text-muted-foreground">Record and view your business transactions</p>
+            <p className="text-muted-foreground">
+              Record and view your business transactions
+            </p>
           </div>
           <Button onClick={() => setOpen(true)}>
             <Plus className="mr-2 h-4 w-4" /> Add Transaction
           </Button>
-          
-          <TransactionDialog 
-            open={open} 
-            setOpen={setOpen} 
-            addTransaction={handleAddTransaction} 
+
+          <TransactionDialog
+            open={open}
+            setOpen={setOpen}
+            addTransaction={handleAddTransaction}
           />
         </div>
 

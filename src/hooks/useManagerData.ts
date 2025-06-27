@@ -1,17 +1,24 @@
-
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { StaffTransaction, CashierPerformance, SalesAnalytics } from '@/types/manager';
-import { loadAllTransactions } from '@/services/transactionService';
-import { generateStaffPerformance } from '@/services/performanceService';
-import { generateSalesAnalytics } from '@/services/analyticsService';
-import { generateReport } from '@/services/reportService';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import {
+  StaffTransaction,
+  CashierPerformance,
+  SalesAnalytics,
+} from "@/types/manager";
+import { loadAllTransactions } from "@/services/transactionService";
+import { generateStaffPerformance } from "@/services/performanceService";
+import { generateSalesAnalytics } from "@/services/analyticsService";
+import { generateReport } from "@/services/reportService";
 
 export const useManagerData = () => {
   const [transactions, setTransactions] = useState<StaffTransaction[]>([]);
-  const [staffPerformance, setStaffPerformance] = useState<CashierPerformance[]>([]);
-  const [salesAnalytics, setSalesAnalytics] = useState<SalesAnalytics | null>(null);
+  const [staffPerformance, setStaffPerformance] = useState<
+    CashierPerformance[]
+  >([]);
+  const [salesAnalytics, setSalesAnalytics] = useState<SalesAnalytics | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -25,18 +32,17 @@ export const useManagerData = () => {
   const loadManagerData = async () => {
     try {
       setLoading(true);
-      
+
       const allTransactions = loadAllTransactions();
       setTransactions(allTransactions);
-      
+
       const performance = generateStaffPerformance(allTransactions);
       setStaffPerformance(performance);
-      
+
       const analytics = generateSalesAnalytics(allTransactions);
       setSalesAnalytics(analytics);
-      
     } catch (error) {
-      console.error('Error loading manager data:', error);
+      console.error("Error loading manager data:", error);
       toast({
         title: "Error",
         description: "Failed to load manager data",
@@ -47,7 +53,12 @@ export const useManagerData = () => {
     }
   };
 
-  const handleGenerateReport = async (config: any) => {
+  const handleGenerateReport = async (config: {
+    type: string;
+    dateFrom: string;
+    dateTo: string;
+    format: string;
+  }) => {
     await generateReport(config, transactions);
   };
 
@@ -61,6 +72,6 @@ export const useManagerData = () => {
     salesAnalytics,
     loading,
     generateReport: handleGenerateReport,
-    refreshTransactions
+    refreshTransactions,
   };
 };

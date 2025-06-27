@@ -1,22 +1,16 @@
-
-import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import AppLayout from '@/components/layout/AppLayout';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/components/ui/use-toast';
-import { Filter, Database } from 'lucide-react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { useInventory } from '@/hooks/useInventory';
-import DeleteConfirmationDialog from '@/components/inventory/DeleteConfirmationDialog';
-import EditProductDialog from '@/components/inventory/EditProductDialog';
-import CategorySidebar from '@/components/inventory/CategorySidebar';
-import InventoryProductTable from '@/components/inventory/InventoryProductTable';
-import InventoryHeader from '@/components/inventory/InventoryHeader';
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import AppLayout from "@/components/layout/AppLayout";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/use-toast";
+import { Filter } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useInventory } from "@/hooks/useInventory";
+import DeleteConfirmationDialog from "@/components/inventory/DeleteConfirmationDialog";
+import EditProductDialog from "@/components/inventory/EditProductDialog";
+import CategorySidebar from "@/components/inventory/CategorySidebar";
+import InventoryProductTable from "@/components/inventory/InventoryProductTable";
+import InventoryHeader from "@/components/inventory/InventoryHeader";
 
 const InventoryViewPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -25,9 +19,9 @@ const InventoryViewPage = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const { toast } = useToast();
-  
-  const { 
-    products, 
+
+  const {
+    products,
     categories,
     searchQuery,
     setSearchQuery,
@@ -35,19 +29,21 @@ const InventoryViewPage = () => {
     handleDeleteProduct,
     loading,
     error,
-    refreshInventory
+    refreshInventory,
   } = useInventory();
-  
+
   // Format categories for the sidebar
-  const [formattedCategories, setFormattedCategories] = useState<{ id: string; name: string; count: number }[]>([]);
-  
+  const [formattedCategories, setFormattedCategories] = useState<
+    { id: string; name: string; count: number }[]
+  >([]);
+
   // Get category from URL or default to 'all'
   useEffect(() => {
-    const categoryParam = searchParams.get('category');
+    const categoryParam = searchParams.get("category");
     if (categoryParam) {
       setSelectedCategory(categoryParam);
     } else {
-      setSelectedCategory('all');
+      setSelectedCategory("all");
     }
   }, [searchParams]);
 
@@ -55,30 +51,42 @@ const InventoryViewPage = () => {
   useEffect(() => {
     if (products && categories) {
       // Calculate categories with product counts
-      const categoryCounts = categories.map(category => {
-        const count = products.filter(product => product.category === category.id).length;
+      const categoryCounts = categories.map((category) => {
+        const count = products.filter(
+          (product) => product.category === category.id
+        ).length;
         return { id: category.id, name: category.name, count };
       });
-      
+
       // Add "All" category with total count
-      categoryCounts.unshift({ id: 'all', name: 'All Products', count: products.length });
-      
+      categoryCounts.unshift({
+        id: "all",
+        name: "All Products",
+        count: products.length,
+      });
+
       // Add "Uncategorized" if there are any
-      const uncategorizedCount = products.filter(product => !product.category).length;
+      const uncategorizedCount = products.filter(
+        (product) => !product.category
+      ).length;
       if (uncategorizedCount > 0) {
-        categoryCounts.push({ id: 'uncategorized', name: 'Uncategorized', count: uncategorizedCount });
+        categoryCounts.push({
+          id: "uncategorized",
+          name: "Uncategorized",
+          count: uncategorizedCount,
+        });
       }
-      
+
       setFormattedCategories(categoryCounts);
     }
   }, [products, categories]);
 
   const handleSelectCategory = (categoryId: string) => {
     setSelectedCategory(categoryId);
-    if (categoryId === 'all') {
-      searchParams.delete('category');
+    if (categoryId === "all") {
+      searchParams.delete("category");
     } else {
-      searchParams.set('category', categoryId);
+      searchParams.set("category", categoryId);
     }
     setSearchParams(searchParams);
   };
@@ -87,12 +95,12 @@ const InventoryViewPage = () => {
   const handleEditClick = (product) => {
     setEditingProduct(product);
   };
-  
+
   const handleDeleteClick = (productId) => {
     setProductToDelete(productId);
     setDeleteDialogOpen(true);
   };
-  
+
   const handleConfirmDelete = () => {
     if (productToDelete) {
       handleDeleteProduct(productToDelete);
@@ -104,28 +112,30 @@ const InventoryViewPage = () => {
   };
 
   // Filter products based on search query and selected category
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
-    
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch = product.name
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+
     if (!matchesSearch) return false;
-    
-    if (!selectedCategory || selectedCategory === 'all') return true;
-    
-    if (selectedCategory === 'uncategorized') {
+
+    if (!selectedCategory || selectedCategory === "all") return true;
+
+    if (selectedCategory === "uncategorized") {
       return !product.category;
     }
-    
+
     return product.category === selectedCategory;
   });
 
   const navigateToInventoryManage = () => {
-    window.location.href = '/inventory';
+    window.location.href = "/inventory";
   };
 
   return (
     <AppLayout>
       <div className="space-y-6 animate-fade-in">
-        <InventoryHeader 
+        <InventoryHeader
           title="Inventory Overview"
           subtitle="View and manage your complete inventory"
           onRefresh={refreshInventory}
@@ -141,7 +151,7 @@ const InventoryViewPage = () => {
 
         <div className="grid gap-4 md:grid-cols-[240px_1fr]">
           <div className="space-y-4">
-            <CategorySidebar 
+            <CategorySidebar
               categories={formattedCategories}
               selectedCategory={selectedCategory}
               onSelectCategory={handleSelectCategory}
@@ -166,7 +176,7 @@ const InventoryViewPage = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <InventoryProductTable 
+                <InventoryProductTable
                   products={filteredProducts}
                   categories={categories}
                   onEdit={handleEditClick}
@@ -178,7 +188,7 @@ const InventoryViewPage = () => {
           </div>
         </div>
       </div>
-      
+
       {editingProduct && (
         <EditProductDialog
           open={!!editingProduct}
@@ -188,7 +198,7 @@ const InventoryViewPage = () => {
           categories={categories}
         />
       )}
-      
+
       <DeleteConfirmationDialog
         open={deleteDialogOpen}
         setOpen={setDeleteDialogOpen}

@@ -38,7 +38,7 @@ const LoginPage = () => {
         // Stay on login screen after registration for them to sign in
         setAuthType("login");
       }
-    } catch (error: any) {
+    } catch (error) {
       setError(error.message || "Authentication failed");
       console.error("Auth error:", error);
     } finally {
