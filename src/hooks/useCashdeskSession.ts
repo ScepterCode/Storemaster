@@ -10,7 +10,13 @@ interface StatsType {
   totalTransactions: number;
   averageTransactionValue: number;
   lastSessionDate: string;
-  recentSessions: CashdeskSession[];
+  recentSessions: Array<{
+    id: string;
+    date: string;
+    sales: number;
+    transactions: number;
+    duration: string;
+  }>;
 }
 
 export const useCashdeskSession = () => {
