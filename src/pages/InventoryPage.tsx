@@ -1,14 +1,12 @@
-
-import React from 'react';
-import AppLayout from '@/components/layout/AppLayout';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Eye, RefreshCw, AlertCircle } from 'lucide-react';
-import { useInventory } from '@/hooks/useInventory';
-import ProductsTab from '@/components/inventory/ProductsTab';
-import CategoriesTab from '@/components/inventory/CategoriesTab';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Skeleton } from '@/components/ui/skeleton';
+import AppLayout from "@/components/layout/AppLayout";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Eye, RefreshCw, AlertCircle } from "lucide-react";
+import { useInventory } from "@/hooks/useInventory";
+import ProductsTab from "@/components/inventory/ProductsTab";
+import CategoriesTab from "@/components/inventory/CategoriesTab";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const InventoryPage = () => {
   const {
@@ -43,7 +41,9 @@ const InventoryPage = () => {
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-2xl font-bold">Inventory Management</h1>
-            <p className="text-muted-foreground">Manage your product inventory and categories</p>
+            <p className="text-muted-foreground">
+              Manage your product inventory and categories
+            </p>
           </div>
           <div className="flex gap-2">
             <Button
@@ -52,13 +52,15 @@ const InventoryPage = () => {
               onClick={refreshInventory}
               disabled={loading}
             >
-              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              {loading ? 'Loading...' : 'Refresh'}
+              <RefreshCw
+                className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
+              />
+              {loading ? "Loading..." : "Refresh"}
             </Button>
             <Button
               variant="outline"
               className="bg-white/60 hover:bg-white/80"
-              onClick={() => window.location.href = '/inventory/view'}
+              onClick={() => (window.location.href = "/inventory/view")}
             >
               <Eye className="mr-2 h-4 w-4" /> View Inventory
             </Button>
@@ -70,7 +72,8 @@ const InventoryPage = () => {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>
-              {error.message || 'There was a problem loading your inventory data. Please try again.'}
+              {error.message ||
+                "There was a problem loading your inventory data. Please try again."}
             </AlertDescription>
           </Alert>
         )}
@@ -80,7 +83,7 @@ const InventoryPage = () => {
             <TabsTrigger value="products">Products</TabsTrigger>
             <TabsTrigger value="categories">Categories</TabsTrigger>
           </TabsList>
-          
+
           {loading ? (
             <div className="space-y-4">
               <Skeleton className="h-12 w-full" />
@@ -89,7 +92,7 @@ const InventoryPage = () => {
           ) : (
             <>
               <TabsContent value="products" className="mt-0">
-                <ProductsTab 
+                <ProductsTab
                   products={products}
                   categories={categories}
                   searchQuery={searchQuery}
@@ -103,9 +106,9 @@ const InventoryPage = () => {
                   handleDeleteProduct={handleDeleteProduct}
                 />
               </TabsContent>
-              
+
               <TabsContent value="categories" className="mt-0">
-                <CategoriesTab 
+                <CategoriesTab
                   categories={categories}
                   products={products}
                   categoryDialogOpen={categoryDialogOpen}
