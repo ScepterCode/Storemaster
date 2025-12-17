@@ -1,19 +1,50 @@
+/**
+ * useCategories Hook
+ * 
+ * React hook for managing category state and operations in the application.
+ * Handles category CRUD operations, offline-first sync, and product reference validation.
+ * 
+ * @module useCategories
+ * 
+ * State Management Pattern:
+ * - Loads categories from local storage immediately on mount
+ * - Fetches from API when user is authenticated
+ * - Clears state on logout
+ * 
+ * Error Handling Pattern:
+ * - Catches all errors from service layer
+ * - Displays user-friendly toast notifications
+ * - Handles authentication errors with redirect
+ * 
+ * Special Features:
+ * - Prevents deletion of categories in use by products
+ * - Validates category references before operations
+ * 
+ * @returns {Object} Category state and operations
+ * @property {Category[]} categories - Array of all categories
+ * @property {boolean} loading - Loading state indicator
+ * @property {Error | null} error - Current error state
+ * @property {Function} handleAddCategory - Creates a new category
+ * @property {Function} handleUpdateCategory - Updates an existing category
+ * @property {Function} handleDeleteCategory - Deletes a category (with validation)
+ * @property {Function} refreshCategories - Refreshes categories from API
+ */
 
 import { useState, useEffect } from 'react';
 import { Category } from '@/types';
 import { generateId } from '@/lib/formatter';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import { useToast } from '@/components/ui/use-toast';
 import {
   fetchCategoriesFromAPI,
-  addCategoryToAPI,
-  updateCategoryInAPI,
-  deleteCategoryFromAPI,
-  getCategoriesFromStorage,
-  addCategoryToStorage,
-  updateCategoryToStorage,
-  deleteCategoryFromStorage
+  getFromStorage,
+  deleteFromAPI,
+  syncEntity,
+  SyncResult
 } from '@/services/categoryService';
+import { AppError } from '@/lib/errorHandler';
+import { useAuthErrorHandler } from './useAuthErrorHandler';
 
 export const useCategories = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -25,17 +56,25 @@ export const useCategories = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const { user } = useAuth();
+  const { organization } = useOrganization();
   const { toast } = useToast();
+  const { handleError: handleAuthError } = useAuthErrorHandler();
 
   useEffect(() => {
-    // Load categories
-    const storedCategories = getCategoriesFromStorage();
-    setCategories(storedCategories);
+    // Load categories from storage
+    try {
+      const storedCategories = getFromStorage();
+      setCategories(storedCategories);
+    } catch (err) {
+      console.error('Error loading categories from storage:', err);
+    }
     
     // If user is authenticated, fetch data from Supabase
     if (user) {
       fetchCategories();
     } else {
+      // Clear state when user logs out
+      setCategories([]);
       setLoading(false);
     }
   }, [user]);
@@ -53,156 +92,146 @@ export const useCategories = () => {
     } catch (err) {
       console.error('Error fetching categories:', err);
       setError(err instanceof Error ? err : new Error('Unknown error fetching categories'));
-      
-      toast({
-        title: "Error",
-        description: "Failed to load category data. Please try again later.",
-        variant: "destructive",
-      });
+      handleAuthError(err, 'Failed to load category data. Please try again later.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddCategory = async () => {
+  const handleAddCategory = async (): Promise<boolean> => {
     if (!newCategory.name) {
       toast({
         title: "Error",
         description: "Please enter a category name",
         variant: "destructive",
       });
-      return;
+      return false;
+    }
+
+    if (!user?.id) {
+      toast({
+        title: "Authentication Required",
+        description: "You must be logged in to add categories",
+        variant: "destructive",
+      });
+      return false;
     }
 
     try {
       setLoading(true);
+      setError(null);
       
       const category: Category = {
         id: generateId(),
         name: newCategory.name,
         description: newCategory.description,
         synced: false,
+        lastModified: new Date().toISOString(),
       };
 
-      console.log('[useCategories] Attempting to add category. Current user:', user);
-      console.log('[useCategories] Category data to be processed:', category);
+      // Use syncEntity to handle both API and storage
+      const result: SyncResult = await syncEntity(category, user.id, 'create', organization?.id);
 
-      // If user is authenticated, store in Supabase
-      if (user && user.id) { // More explicit check
-        try {
-          console.log('[useCategories] Calling addCategoryToAPI with userId:', user.id, 'and category:', category);
-          const syncedCategory = await addCategoryToAPI(category, user.id);
-          category.synced = syncedCategory.synced;
-          
+      if (result.success && result.data) {
+        // Update state with the synced category
+        setCategories([...categories, result.data]);
+
+        // Show appropriate message based on sync status
+        if (result.synced) {
           toast({
             title: "Success",
-            description: "Category added successfully to API.", // Clarify API success
+            description: "Category added successfully",
             variant: "default",
           });
-        } catch (err) {
-          console.error('Error saving category to Supabase:', err);
+        } else {
           toast({
-            title: "Sync Error",
-            description: "Category saved locally but failed to sync to API.", // Clarify API sync failure
-            variant: "destructive",
+            title: "Saved Locally",
+            description: "Category saved. Will sync when online.",
+            variant: "default",
           });
         }
-      } else {
-        console.error('[useCategories] User not authenticated or user.id missing. Cannot save category to API. Category will be saved locally only.');
-        toast({
-          title: "Authentication Issue",
-          description: "You are not fully logged in. Category saved locally only.",
-          variant: "warning",
+
+        // Reset form and close dialog
+        setNewCategory({
+          name: '',
+          description: '',
         });
-        // The category is already marked as synced: false by default
+        setCategoryDialogOpen(false);
+        
+        return true;
       }
-
-      // Add to local storage
-      addCategoryToStorage(category);
-
-      // Update state
-      setCategories([...categories, category]);
-
-      // Reset form and close dialog
-      setNewCategory({
-        name: '',
-        description: '',
-      });
-      setCategoryDialogOpen(false);
+      
+      return false;
     } catch (err) {
       console.error('Error adding category:', err);
       setError(err instanceof Error ? err : new Error('Unknown error adding category'));
-      
-      toast({
-        title: "Error",
-        description: "Failed to add category. Please try again.",
-        variant: "destructive",
-      });
+      handleAuthError(err, 'Failed to add category. Please try again.');
+      return false;
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpdateCategory = async (updatedCategory: Category) => {
+  const handleUpdateCategory = async (updatedCategory: Category): Promise<boolean> => {
     if (!updatedCategory.name) {
       toast({
         title: "Error",
         description: "Please enter a category name",
         variant: "destructive",
       });
-      return;
+      return false;
+    }
+
+    if (!user?.id) {
+      toast({
+        title: "Authentication Required",
+        description: "You must be logged in to update categories",
+        variant: "destructive",
+      });
+      return false;
     }
 
     try {
       setLoading(true);
-      
-      const categoryToUpdate = {
-        ...updatedCategory,
-        synced: false,
-      };
+      setError(null);
 
-      // If user is authenticated, update in Supabase
-      if (user) {
-        try {
-          const syncedCategory = await updateCategoryInAPI(categoryToUpdate);
-          categoryToUpdate.synced = syncedCategory.synced;
-          
+      // Use syncEntity to handle both API and storage
+      const result: SyncResult = await syncEntity(updatedCategory, user.id, 'update', organization?.id);
+
+      if (result.success && result.data) {
+        // Update state with the synced category
+        setCategories(categories.map(c => c.id === result.data!.id ? result.data! : c));
+
+        // Show appropriate message based on sync status
+        if (result.synced) {
           toast({
             title: "Success",
             description: "Category updated successfully",
             variant: "default",
           });
-        } catch (err) {
-          console.error('Error updating category in Supabase:', err);
+        } else {
           toast({
-            title: "Sync Error",
-            description: "Category updated locally but failed to sync",
-            variant: "destructive",
+            title: "Saved Locally",
+            description: "Category updated. Will sync when online.",
+            variant: "default",
           });
         }
+        
+        return true;
       }
-
-      // Update in local storage
-      updateCategoryToStorage(categoryToUpdate);
-
-      // Update state
-      setCategories(categories.map(c => c.id === categoryToUpdate.id ? categoryToUpdate : c));
-
+      
+      return false;
     } catch (err) {
       console.error('Error updating category:', err);
       setError(err instanceof Error ? err : new Error('Unknown error updating category'));
-      
-      toast({
-        title: "Error",
-        description: "Failed to update category. Please try again.",
-        variant: "destructive",
-      });
+      handleAuthError(err, 'Failed to update category. Please try again.');
+      return false;
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteCategory = async (categoryId: string, productsUsingCategory: number) => {
+  const handleDeleteCategory = async (categoryId: string, productsUsingCategory: number): Promise<boolean> => {
     // Prevent deletion if there are products using this category
     if (productsUsingCategory > 0) {
       toast({
@@ -210,47 +239,50 @@ export const useCategories = () => {
         description: `This category is being used by ${productsUsingCategory} product${productsUsingCategory === 1 ? '' : 's'}. Please reassign or delete these products first.`,
         variant: "destructive",
       });
-      return;
+      return false;
+    }
+
+    if (!user?.id) {
+      toast({
+        title: "Authentication Required",
+        description: "You must be logged in to delete categories",
+        variant: "destructive",
+      });
+      return false;
     }
 
     try {
       setLoading(true);
+      setError(null);
 
-      // If user is authenticated, delete from Supabase
-      if (user) {
-        try {
-          await deleteCategoryFromAPI(categoryId);
-          
-          toast({
-            title: "Success",
-            description: "Category deleted successfully",
-            variant: "default",
-          });
-        } catch (err) {
-          console.error('Error deleting category from Supabase:', err);
-          toast({
-            title: "Sync Error",
-            description: "Category deleted locally but failed to sync",
-            variant: "destructive",
-          });
-        }
+      // Try to delete from API
+      try {
+        await deleteFromAPI(categoryId);
+        
+        toast({
+          title: "Success",
+          description: "Category deleted successfully",
+          variant: "default",
+        });
+      } catch (apiError) {
+        console.warn('Failed to delete category from API:', apiError);
+        
+        toast({
+          title: "Sync Error",
+          description: "Category deleted locally but failed to sync",
+          variant: "destructive",
+        });
       }
-
-      // Delete from local storage
-      deleteCategoryFromStorage(categoryId);
 
       // Update state
       setCategories(categories.filter(category => category.id !== categoryId));
-
+      
+      return true;
     } catch (err) {
       console.error('Error deleting category:', err);
       setError(err instanceof Error ? err : new Error('Unknown error deleting category'));
-      
-      toast({
-        title: "Error",
-        description: "Failed to delete category. Please try again.",
-        variant: "destructive",
-      });
+      handleAuthError(err, 'Failed to delete category. Please try again.');
+      return false;
     } finally {
       setLoading(false);
     }

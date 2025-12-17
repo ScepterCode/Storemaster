@@ -11,6 +11,7 @@ import {
   ShoppingCartIcon,
   PackageIcon,
   Users,
+  TrendingUp,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -18,6 +19,8 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions, Permission } from '@/hooks/usePermissions'; // Import Permission type
+import { useAdminAuth } from '@/hooks/useAdminAuth';
+import { Shield } from 'lucide-react';
 
 interface SidebarNavigationItem {
   label: string;
@@ -36,6 +39,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }: SidebarProps) => {
   const location = useLocation();
   const { user, signOut } = useAuth();
   const { hasPermission, loading } = usePermissions();
+  const { isAdmin } = useAdminAuth();
 
   const isActive = (path: string) => {
     // Special case for dashboard/root path
@@ -94,6 +98,13 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }: SidebarProps) => {
       icon: <LineChartIcon className="h-4 w-4" />,
       href: '/reports',
       active: isActive('/reports'),
+      permission: 'reports_view'
+    },
+    {
+      label: 'Stock Predictions',
+      icon: <TrendingUp className="h-4 w-4" />,
+      href: '/stock-predictions',
+      active: isActive('/stock-predictions'),
       permission: 'reports_view'
     },
     {
@@ -180,7 +191,22 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }: SidebarProps) => {
       </ScrollArea>
 
       {user && (
-        <div className="h-14 border-t px-2 py-2">
+        <div className="border-t px-2 py-2 space-y-1">
+          {isAdmin && (
+            <Button
+              variant="ghost"
+              asChild
+              className={cn(
+                'h-10 justify-start',
+                isSidebarOpen ? 'h-10 w-full px-4' : 'h-10 w-10'
+              )}
+            >
+              <Link to="/admin">
+                <Shield className="h-4 w-4" />
+                {isSidebarOpen && <span className="ml-2">Admin Panel</span>}
+              </Link>
+            </Button>
+          )}
           <Button
             variant="ghost"
             className={cn(

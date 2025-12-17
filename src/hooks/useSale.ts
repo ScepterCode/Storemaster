@@ -4,8 +4,10 @@ import { useToast } from '@/components/ui/use-toast';
 import { useProducts } from '@/hooks/useProducts';
 import { useCashdeskSession } from '@/hooks/useCashdeskSession';
 import { Sale, SaleItem, SaleCustomer, PaymentMethod } from '@/types/cashdesk';
-import { Product } from '@/types'; // Ensure Product type is imported
+import { Product, Transaction } from '@/types';
 import { generateId } from '@/lib/formatter';
+import * as productService from '@/services/productService';
+import * as transactionService from '@/services/transactionService';
 
 export const useSale = (sessionId: string) => {
   // Retrieve and set tax rate from environment variable
@@ -38,7 +40,7 @@ export const useSale = (sessionId: string) => {
 
   const { user } = useAuth();
   const { toast } = useToast();
-  const { products, handleUpdateProduct } = useProducts(); // Destructure products
+  const { products, refreshProducts } = useProducts();
   const { updateSession, currentSession } = useCashdeskSession();
 
   useEffect(() => {
@@ -189,38 +191,142 @@ export const useSale = (sessionId: string) => {
   };
 
   const processSale = async (payments: PaymentMethod[]) => {
-    // Update inventory for each item
+    if (!user?.id) {
+      toast({
+        title: "Error",
+        description: "User not authenticated. Please log in.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate stock availability before processing sale
     for (const item of currentSale.items) {
-      try {
-        const productInStock = products.find(p => p.id === item.productId);
+      const productInStock = products.find(p => p.id === item.productId);
 
-        if (!productInStock) {
-          console.error(`Product with ID ${item.productId} not found in stock. Cannot update inventory for this item.`);
-          continue; // Skip to the next item
-        }
+      if (!productInStock) {
+        toast({
+          title: "Error",
+          description: `Product ${item.productName} not found in inventory.`,
+          variant: "destructive",
+        });
+        return;
+      }
 
-        const newQuantityInStock = productInStock.quantity - item.quantity;
-
-        if (newQuantityInStock < 0) {
-          console.error(`Insufficient stock for product ${productInStock.name} (ID: ${item.productId}). Sold ${item.quantity}, but only ${productInStock.quantity} in stock. Inventory will be negative.`);
-          // Proceeding with negative quantity as per current instruction
-        }
-
-        const updatedProductData: Product = {
-          ...productInStock,
-          quantity: newQuantityInStock
-        };
-        
-        await handleUpdateProduct(updatedProductData);
-      } catch (error) {
-        console.error('Failed to update inventory for product:', item.productId, error);
-        // Optionally, add a toast notification here for the user
-        // For now, just logging to console as per instructions
+      if (productInStock.quantity < item.quantity) {
+        toast({
+          title: "Insufficient Stock",
+          description: `Not enough stock for ${productInStock.name}. Available: ${productInStock.quantity}, Required: ${item.quantity}`,
+          variant: "destructive",
+        });
+        return;
       }
     }
 
-    // Save sale to local storage
-    const salesKey = `cashdesk_sales_${user?.id}`;
+    // Update inventory for each item using product service
+    const inventoryUpdateErrors: string[] = [];
+    const conflictErrors: string[] = [];
+    
+    for (const item of currentSale.items) {
+      try {
+        const productInStock = products.find(p => p.id === item.productId);
+        
+        if (!productInStock) {
+          continue; // Already validated above
+        }
+
+        const updatedProduct: Product = {
+          ...productInStock,
+          quantity: productInStock.quantity - item.quantity,
+          lastModified: new Date().toISOString(),
+        };
+        
+        // Use product service to sync the update with optimistic locking
+        const result = await productService.syncEntity(updatedProduct, user.id, 'update');
+        
+        if (!result.success) {
+          // Check if it's a concurrent update conflict
+          if (result.error?.message?.includes('modified by another user')) {
+            conflictErrors.push(productInStock.name);
+          } else {
+            inventoryUpdateErrors.push(`Failed to update ${productInStock.name}`);
+          }
+          console.error('Failed to update inventory for product:', item.productId, result.error);
+        } else if (!result.synced) {
+          console.warn(`Product ${productInStock.name} updated locally but not synced to server`);
+        }
+      } catch (error) {
+        // Check if it's a concurrent update conflict
+        const errorMessage = error instanceof Error ? error.message : '';
+        if (errorMessage.includes('modified by another user')) {
+          conflictErrors.push(item.productName);
+        } else {
+          inventoryUpdateErrors.push(`Error updating ${item.productName}`);
+        }
+        console.error('Failed to update inventory for product:', item.productId, error);
+      }
+    }
+
+    // Handle concurrent update conflicts
+    if (conflictErrors.length > 0) {
+      toast({
+        title: "Inventory Conflict",
+        description: `Products were modified by another user: ${conflictErrors.join(', ')}. Please refresh inventory and retry the sale.`,
+        variant: "destructive",
+      });
+      await refreshProducts();
+      return;
+    }
+
+    // Show warning if there were inventory update errors
+    if (inventoryUpdateErrors.length > 0) {
+      toast({
+        title: "Inventory Update Issues",
+        description: `Sale completed but some inventory updates failed: ${inventoryUpdateErrors.join(', ')}`,
+        variant: "destructive",
+      });
+    }
+
+    // Refresh products to get updated inventory
+    await refreshProducts();
+
+    // Create transaction record using transaction service
+    const transaction: Transaction = {
+      id: generateId(),
+      amount: currentSale.total,
+      description: `Sale: ${currentSale.items.length} item(s) - ${currentSale.items.map(i => i.productName).join(', ')}`,
+      date: new Date().toISOString(),
+      type: 'sale',
+      category: 'sales',
+      reference: currentSale.transactionId,
+      synced: false,
+      lastModified: new Date().toISOString(),
+    };
+
+    try {
+      const transactionResult = await transactionService.syncEntity(transaction, user.id, 'create');
+      
+      if (!transactionResult.success) {
+        console.error('Failed to save transaction:', transactionResult.error);
+        toast({
+          title: "Warning",
+          description: "Sale completed but transaction record failed to save",
+          variant: "destructive",
+        });
+      } else if (!transactionResult.synced) {
+        console.warn('Transaction saved locally but not synced to server');
+      }
+    } catch (error) {
+      console.error('Error saving transaction:', error);
+      toast({
+        title: "Warning",
+        description: "Sale completed but transaction record failed to save",
+        variant: "destructive",
+      });
+    }
+
+    // Save sale to local storage for cashdesk history
+    const salesKey = `cashdesk_sales_${user.id}`;
     const sales = JSON.parse(localStorage.getItem(salesKey) || '[]');
     
     const completedSale: Sale = {

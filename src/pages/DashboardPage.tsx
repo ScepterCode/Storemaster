@@ -6,12 +6,19 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { formatNaira } from '@/lib/formatter';
-import { getStoredItems } from '@/lib/offlineStorage';
-import { STORAGE_KEYS } from '@/lib/offlineStorage';
-import { Transaction, Product, Invoice, DashboardStats } from '@/types';
+import { Product, DashboardStats } from '@/types';
 import { Plus, ArrowUp, ArrowDown, Calendar } from 'lucide-react';
+import { useTransactions } from '@/hooks/useTransactions';
+import { useProducts } from '@/hooks/useProducts';
+import { useInvoices } from '@/hooks/useInvoices';
+import { useOrganization } from '@/contexts/OrganizationContext';
+import AnalyticsPreview from '@/components/dashboard/AnalyticsPreview';
 
 const DashboardPage = () => {
+  const { transactions } = useTransactions();
+  const { products } = useProducts();
+  const { invoices } = useInvoices();
+  const { organization } = useOrganization();
   const [stats, setStats] = useState<DashboardStats>({
     totalRevenue: 0,
     totalExpenses: 0,
@@ -19,16 +26,13 @@ const DashboardPage = () => {
     lowStockItems: 0,
     pendingInvoices: 0,
   });
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [lowStockProducts, setLowStockProducts] = useState<Product[]>([]);
   
   useEffect(() => {
-    // Load data from offline storage
-    const transactions = getStoredItems<Transaction>(STORAGE_KEYS.TRANSACTIONS);
-    const products = getStoredItems<Product>(STORAGE_KEYS.INVENTORY);
-    const invoices = getStoredItems<Invoice>(STORAGE_KEYS.INVOICES);
-
-    // Calculate dashboard stats
+    console.log('Dashboard: products array:', products);
+    console.log('Dashboard: products length:', products.length);
+    
+    // Calculate dashboard stats from hooks data
     const sales = transactions.filter(t => t.type === 'sale');
     const expenses = transactions.filter(t => t.type === 'expense' || t.type === 'purchase');
     
@@ -36,6 +40,8 @@ const DashboardPage = () => {
     const totalExpenses = expenses.reduce((sum, t) => sum + t.amount, 0);
     const lowStockItems = products.filter(p => p.quantity <= 5).length;
     const pendingInvoices = invoices.filter(i => i.status === 'issued' || i.status === 'overdue').length;
+
+    console.log('Dashboard: lowStockItems count:', lowStockItems);
 
     setStats({
       totalRevenue,
@@ -45,19 +51,21 @@ const DashboardPage = () => {
       pendingInvoices,
     });
 
-    // Get recent transactions
-    const recent = [...transactions]
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 5);
-    setRecentTransactions(recent);
-
     // Get low stock products
     const lowStock = products
       .filter(p => p.quantity <= 5)
       .sort((a, b) => a.quantity - b.quantity)
       .slice(0, 5);
+    console.log('Dashboard: lowStock products:', lowStock);
     setLowStockProducts(lowStock);
-  }, []);
+  }, [transactions, products, invoices]);
+
+  // Get recent transactions (derived from transactions state)
+  const recentTransactions = React.useMemo(() => {
+    return [...transactions]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5);
+  }, [transactions]);
 
   const renderTransactionIcon = (type: string) => {
     if (type === 'sale') {
@@ -121,6 +129,11 @@ const DashboardPage = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Show analytics preview for free users */}
+        {organization?.subscription_tier === 'free' && (
+          <AnalyticsPreview />
+        )}
 
         <Tabs defaultValue="recent">
           <TabsList className="grid w-full grid-cols-2 h-12 mb-4">

@@ -69,8 +69,16 @@ const EditProductDialog = ({
           <div className="grid gap-2">
             <Label htmlFor="category">Category</Label>
             <Select 
-              value={editedProduct.category || ''} 
-              onValueChange={(value) => setEditedProduct({ ...editedProduct, category: value })}
+              value={editedProduct.category_id || editedProduct.category || ''} 
+              onValueChange={(value) => {
+                const selectedCategory = categories.find(c => c.id === value);
+                setEditedProduct({ 
+                  ...editedProduct, 
+                  category_id: value,
+                  category: selectedCategory?.name || value,
+                  categoryName: selectedCategory?.name
+                });
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select a category" />

@@ -4,12 +4,18 @@ import { useProducts } from './useProducts';
 import { useCategories } from './useCategories';
 import { useSearchQuery } from './useSearchQuery';
 
+/**
+ * Composite hook for inventory management that combines products and categories.
+ * This hook only composes useProducts and useCategories without any direct storage operations.
+ * 
+ * @returns Combined state and operations for inventory management
+ */
 export const useInventory = () => {
   const [activeTab, setActiveTab] = useState('products');
   
+  // Compose products hook - no direct storage operations
   const { 
-    products, 
-    setProducts,
+    products,
     productDialogOpen, 
     setProductDialogOpen, 
     newProduct, 
@@ -22,9 +28,9 @@ export const useInventory = () => {
     refreshProducts
   } = useProducts();
   
+  // Compose categories hook - no direct storage operations
   const { 
-    categories, 
-    setCategories,
+    categories,
     categoryDialogOpen, 
     setCategoryDialogOpen, 
     newCategory, 
@@ -37,6 +43,7 @@ export const useInventory = () => {
     refreshCategories
   } = useCategories();
   
+  // Compose search query hook
   const { 
     searchQuery, 
     setSearchQuery,
@@ -47,18 +54,21 @@ export const useInventory = () => {
   // Combined loading state
   const loading = productsLoading || categoriesLoading;
   
-  // Combined error handling
+  // Combined error handling - return the first error encountered
   const error = productsError || categoriesError;
 
-  // Refresh all data
+  // Refresh all inventory data
   const refreshInventory = () => {
     refreshProducts();
     refreshCategories();
   };
 
   return {
+    // Data
     products,
     categories,
+    
+    // UI State
     activeTab,
     setActiveTab,
     productDialogOpen,
@@ -68,17 +78,27 @@ export const useInventory = () => {
     searchQuery,
     setSearchQuery,
     isSearching,
-    handleSearch,
+    
+    // Form State
     newProduct,
     setNewProduct,
     newCategory,
     setNewCategory,
+    
+    // Product Operations
     handleAddProduct,
     handleUpdateProduct,
     handleDeleteProduct,
+    
+    // Category Operations
     handleAddCategory,
     handleUpdateCategory,
     handleDeleteCategory,
+    
+    // Search Operations
+    handleSearch,
+    
+    // Combined State
     loading,
     error,
     refreshInventory,

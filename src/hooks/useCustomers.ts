@@ -1,19 +1,46 @@
+/**
+ * useCustomers Hook
+ * 
+ * React hook for managing customer state and operations in the application.
+ * Handles customer CRUD operations, offline-first sync, and authentication state changes.
+ * 
+ * @module useCustomers
+ * 
+ * State Management Pattern:
+ * - Loads customers from local storage immediately on mount
+ * - Fetches from API when user is authenticated
+ * - Clears state on logout
+ * 
+ * Error Handling Pattern:
+ * - Catches all errors from service layer
+ * - Displays user-friendly toast notifications
+ * - Handles authentication errors with redirect
+ * 
+ * @returns {Object} Customer state and operations
+ * @property {Customer[]} customers - Array of all customers
+ * @property {boolean} loading - Loading state indicator
+ * @property {Error | null} error - Current error state
+ * @property {Function} handleAddCustomer - Creates a new customer
+ * @property {Function} handleUpdateCustomer - Updates an existing customer
+ * @property {Function} handleDeleteCustomer - Deletes a customer
+ * @property {Function} refreshCustomers - Refreshes customers from API
+ */
 
 import { useState, useEffect } from 'react';
 import { Customer } from '@/types';
 import { generateId } from '@/lib/formatter';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import { useToast } from '@/components/ui/use-toast';
 import {
   fetchCustomersFromAPI,
-  addCustomerToAPI,
-  updateCustomerInAPI,
-  deleteCustomerFromAPI,
-  getCustomersFromStorage,
-  addCustomerToStorage,
-  updateCustomerInStorage,
-  deleteCustomerFromStorage
+  getFromStorage,
+  deleteFromAPI,
+  deleteFromStorage,
+  syncEntity,
 } from '@/services/customerService';
+import { AppError, getUserMessage, logError } from '@/lib/errorHandler';
+import { useAuthErrorHandler } from './useAuthErrorHandler';
 
 export const useCustomers = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -27,58 +54,70 @@ export const useCustomers = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const { user } = useAuth();
+  const { organization } = useOrganization();
   const { toast } = useToast();
+  const { handleError: handleAuthError } = useAuthErrorHandler();
 
   useEffect(() => {
-    // Load customers
-    const storedCustomers = getCustomersFromStorage();
-    setCustomers(storedCustomers);
-    
+    // Load customers from offline storage
+    try {
+      const storedCustomers = getFromStorage();
+      setCustomers(storedCustomers);
+    } catch (err) {
+      console.error('Error loading customers from storage:', err);
+    }
+
     // If user is authenticated, fetch data from Supabase
     if (user) {
       fetchCustomers();
     } else {
+      // Clear state when user logs out
+      setCustomers([]);
       setLoading(false);
     }
   }, [user]);
-  
+
   const fetchCustomers = async () => {
     if (!user) return;
-    
+
     try {
       setLoading(true);
       setError(null);
-      
+
       const fetchedCustomers = await fetchCustomersFromAPI(user.id);
       setCustomers(fetchedCustomers);
-      
     } catch (err) {
       console.error('Error fetching customers:', err);
       setError(err instanceof Error ? err : new Error('Unknown error fetching customers'));
-      
-      toast({
-        title: "Error",
-        description: "Failed to load customer data. Please try again later.",
-        variant: "destructive",
-      });
+      handleAuthError(err, 'Failed to load customer data. Please try again later.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddCustomer = async (customerData: Partial<Customer>) => {
+  const handleAddCustomer = async (customerData: Partial<Customer>): Promise<Customer | null> => {
     if (!customerData.name) {
       toast({
-        title: "Error",
-        description: "Please enter a customer name",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Please enter a customer name',
+        variant: 'destructive',
+      });
+      return null;
+    }
+
+    if (!user?.id) {
+      toast({
+        title: 'Authentication Required',
+        description: 'You must be logged in to add customers.',
+        variant: 'destructive',
       });
       return null;
     }
 
     try {
       setLoading(true);
-      
+      setError(null);
+
       const customer: Customer = {
         id: generateId(),
         name: customerData.name,
@@ -86,166 +125,174 @@ export const useCustomers = () => {
         email: customerData.email,
         address: customerData.address,
         synced: false,
+        lastModified: new Date().toISOString(),
       };
 
-      // If user is authenticated, store in Supabase
-      if (user) {
-        try {
-          const syncedCustomer = await addCustomerToAPI(customer, user.id);
-          customer.synced = syncedCustomer.synced;
-          
+      // Use syncEntity to handle both API and storage
+      const result = await syncEntity(customer, user.id, 'create', organization?.id);
+
+      if (result.success && result.data) {
+        // Update state with the synced customer
+        setCustomers([...customers, result.data]);
+
+        // Show appropriate message based on sync status
+        if (result.synced) {
           toast({
-            title: "Success",
-            description: "Customer added successfully",
-            variant: "default",
+            title: 'Success',
+            description: 'Customer added successfully.',
+            variant: 'default',
           });
-        } catch (err) {
-          console.error('Error saving customer to Supabase:', err);
+        } else {
           toast({
-            title: "Sync Error",
-            description: "Customer saved locally but failed to sync",
-            variant: "destructive",
+            title: 'Saved Locally',
+            description: 'Customer saved. Will sync when connection is restored.',
+            variant: 'default',
           });
         }
+
+        // Reset form and close dialog
+        setNewCustomer({
+          name: '',
+          phone: '',
+          email: '',
+          address: '',
+        });
+        setCustomerDialogOpen(false);
+
+        return result.data;
       }
 
-      // Add to local storage
-      addCustomerToStorage(customer);
-
-      // Update state
-      setCustomers([...customers, customer]);
-
-      // Reset form and close dialog
-      setNewCustomer({
-        name: '',
-        phone: '',
-        email: '',
-        address: '',
-      });
-      setCustomerDialogOpen(false);
-      
-      return customer;
+      return null;
     } catch (err) {
       console.error('Error adding customer:', err);
       setError(err instanceof Error ? err : new Error('Unknown error adding customer'));
-      
-      toast({
-        title: "Error",
-        description: "Failed to add customer. Please try again.",
-        variant: "destructive",
-      });
-      
+      handleAuthError(err, 'Failed to add customer. Please try again.');
       return null;
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpdateCustomer = async (updatedCustomer: Customer) => {
+  const handleUpdateCustomer = async (updatedCustomer: Customer): Promise<boolean> => {
+    if (!updatedCustomer.id) {
+      toast({
+        title: 'Error',
+        description: 'Cannot update customer without an ID',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
     if (!updatedCustomer.name) {
       toast({
-        title: "Error",
-        description: "Please enter a customer name",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Please enter a customer name',
+        variant: 'destructive',
       });
-      return;
+      return false;
+    }
+
+    if (!user?.id) {
+      toast({
+        title: 'Authentication Required',
+        description: 'You must be logged in to update customers.',
+        variant: 'destructive',
+      });
+      return false;
     }
 
     try {
       setLoading(true);
-      
-      const customerToUpdate = {
-        ...updatedCustomer,
-        synced: false,
-      };
+      setError(null);
 
-      // If user is authenticated, update in Supabase
-      if (user) {
-        try {
-          const syncedCustomer = await updateCustomerInAPI(customerToUpdate);
-          customerToUpdate.synced = syncedCustomer.synced;
-          
+      // Use syncEntity to handle both API and storage
+      const result = await syncEntity(updatedCustomer, user.id, 'update', organization?.id);
+
+      if (result.success && result.data) {
+        // Update state with the synced customer
+        setCustomers(customers.map((c) => (c.id === result.data!.id ? result.data! : c)));
+
+        // Show appropriate message based on sync status
+        if (result.synced) {
           toast({
-            title: "Success",
-            description: "Customer updated successfully",
-            variant: "default",
+            title: 'Success',
+            description: 'Customer updated successfully.',
+            variant: 'default',
           });
-        } catch (err) {
-          console.error('Error updating customer in Supabase:', err);
+        } else {
           toast({
-            title: "Sync Error",
-            description: "Customer updated locally but failed to sync",
-            variant: "destructive",
+            title: 'Saved Locally',
+            description: 'Customer updated. Will sync when connection is restored.',
+            variant: 'default',
           });
         }
+
+        return true;
       }
 
-      // Update in local storage
-      updateCustomerInStorage(customerToUpdate);
-
-      // Update state
-      setCustomers(customers.map(c => c.id === customerToUpdate.id ? customerToUpdate : c));
-
+      return false;
     } catch (err) {
       console.error('Error updating customer:', err);
       setError(err instanceof Error ? err : new Error('Unknown error updating customer'));
-      
-      toast({
-        title: "Error",
-        description: "Failed to update customer. Please try again.",
-        variant: "destructive",
-      });
+      handleAuthError(err, 'Failed to update customer. Please try again.');
+      return false;
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteCustomer = async (customerId: string) => {
+  const handleDeleteCustomer = async (customerId: string): Promise<boolean> => {
+    if (!user?.id) {
+      toast({
+        title: 'Authentication Required',
+        description: 'You must be logged in to delete customers.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+
     try {
       setLoading(true);
+      setError(null);
 
-      // If user is authenticated, delete from Supabase
-      if (user) {
-        try {
-          await deleteCustomerFromAPI(customerId);
-          
-          toast({
-            title: "Success",
-            description: "Customer deleted successfully",
-            variant: "default",
-          });
-        } catch (err) {
-          console.error('Error deleting customer from Supabase:', err);
-          toast({
-            title: "Sync Error",
-            description: "Customer deleted locally but failed to sync",
-            variant: "destructive",
-          });
-        }
+      // Try to delete from API first
+      try {
+        await deleteFromAPI(customerId);
+
+        toast({
+          title: 'Success',
+          description: 'Customer deleted successfully.',
+          variant: 'default',
+        });
+      } catch (apiError) {
+        console.warn('Failed to delete from API, deleting locally:', apiError);
+
+        toast({
+          title: 'Deleted Locally',
+          description: 'Customer deleted locally. Will sync when connection is restored.',
+          variant: 'default',
+        });
       }
 
-      // Delete from local storage
-      deleteCustomerFromStorage(customerId);
+      // Always delete from local storage
+      deleteFromStorage(customerId);
 
       // Update state
-      setCustomers(customers.filter(customer => customer.id !== customerId));
+      setCustomers(customers.filter((customer) => customer.id !== customerId));
 
+      return true;
     } catch (err) {
       console.error('Error deleting customer:', err);
       setError(err instanceof Error ? err : new Error('Unknown error deleting customer'));
-      
-      toast({
-        title: "Error",
-        description: "Failed to delete customer. Please try again.",
-        variant: "destructive",
-      });
+      handleAuthError(err, 'Failed to delete customer. Please try again.');
+      return false;
     } finally {
       setLoading(false);
     }
   };
 
-  const refreshCustomers = () => {
-    fetchCustomers();
+  const refreshCustomers = async (): Promise<void> => {
+    await fetchCustomers();
   };
 
   return {

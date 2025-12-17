@@ -53,7 +53,7 @@ const InventoryViewPage = () => {
       // Calculate categories with product counts
       const categoryCounts = categories.map((category) => {
         const count = products.filter(
-          (product) => product.category === category.id
+          (product) => product.category_id === category.id || product.category === category.id
         ).length;
         return { id: category.id, name: category.name, count };
       });
@@ -67,7 +67,7 @@ const InventoryViewPage = () => {
 
       // Add "Uncategorized" if there are any
       const uncategorizedCount = products.filter(
-        (product) => !product.category
+        (product) => !product.category_id && !product.category
       ).length;
       if (uncategorizedCount > 0) {
         categoryCounts.push({
@@ -122,10 +122,10 @@ const InventoryViewPage = () => {
     if (!selectedCategory || selectedCategory === "all") return true;
 
     if (selectedCategory === "uncategorized") {
-      return !product.category;
+      return !product.category_id && !product.category;
     }
 
-    return product.category === selectedCategory;
+    return product.category_id === selectedCategory || product.category === selectedCategory;
   });
 
   const navigateToInventoryManage = () => {

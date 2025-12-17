@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Product, Category } from '@/types';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { getProductsFromStorage } from '@/services/productService'; // Import for local storage
+import { getFromStorage } from '@/services/productService'; // Import for local storage
 
 export const useStock = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -28,10 +28,13 @@ export const useStock = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch products
+      // Fetch products with category join
       const { data: productsData, error: productsError } = await supabase
         .from('products')
-        .select('*')
+        .select(`
+          *,
+          categories!category_id(id, name)
+        `)
         .order('name');
 
       if (productsError) {
@@ -53,8 +56,10 @@ export const useStock = () => {
         id: product.id,
         name: product.name,
         quantity: product.quantity,
-        unitPrice: product.selling_price,
+        unitPrice: product.unit_price || 0, // Use unit_price from database
         category: product.category_id,
+        category_id: product.category_id,
+        categoryName: product.categories?.name,
         description: product.description || undefined,
         synced: true,
       }));
@@ -68,7 +73,7 @@ export const useStock = () => {
       }));
 
       // Get products from local storage
-      const localProducts: Product[] = getProductsFromStorage();
+      const localProducts: Product[] = getFromStorage();
 
       const productMap = new Map<string, Product>();
 

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,9 +19,40 @@ const LandingPage: React.FC = () => {
 
   // Redirect if user is already logged in
   React.useEffect(() => {
-    if (user) {
-      navigate('/dashboard');
-    }
+    const checkAndRedirect = async () => {
+      if (!user) return;
+
+      // Check if user has an organization first
+      const { data: orgMember } = await supabase
+        .from('organization_members' as any)
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (orgMember) {
+        // User has organization - go to organization dashboard
+        // (They can access admin panel via link in the UI)
+        navigate('/dashboard');
+      } else {
+        // No organization - check if admin
+        const { data: adminData } = await supabase
+          .from('admin_users' as any)
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (adminData) {
+          // Admin without organization - go to admin dashboard
+          navigate('/admin');
+        } else {
+          // No organization and not admin - go to onboarding
+          navigate('/onboarding/setup');
+        }
+      }
+    };
+
+    checkAndRedirect();
   }, [user, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -30,7 +62,37 @@ const LandingPage: React.FC = () => {
     
     try {
       await signIn(email, password);
-      navigate('/dashboard');
+      
+      // Check if user has an organization first
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (currentUser) {
+        const { data: orgMember } = await supabase
+          .from('organization_members' as any)
+          .select('id')
+          .eq('user_id', currentUser.id)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (orgMember) {
+          // User has organization - go to organization dashboard
+          navigate('/dashboard');
+        } else {
+          // No organization - check if admin
+          const { data: adminData } = await supabase
+            .from('admin_users' as any)
+            .select('id')
+            .eq('id', currentUser.id)
+            .maybeSingle();
+
+          if (adminData) {
+            // Admin without organization - go to admin dashboard
+            navigate('/admin');
+          } else {
+            // No organization and not admin - go to onboarding
+            navigate('/onboarding/setup');
+          }
+        }
+      }
     } catch (err) {
       console.error("Login error:", err);
       setError(err instanceof Error ? err.message : 'Failed to sign in');
@@ -142,6 +204,12 @@ const LandingPage: React.FC = () => {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label htmlFor="password">Password</Label>
+                        <a 
+                          href="/forgot-password" 
+                          className="text-sm text-primary hover:underline"
+                        >
+                          Forgot password?
+                        </a>
                       </div>
                       <Input 
                         id="password" 

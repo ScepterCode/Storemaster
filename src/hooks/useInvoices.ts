@@ -1,60 +1,102 @@
+/**
+ * useInvoices Hook
+ * 
+ * React hook for managing invoice state and operations in the application.
+ * Handles invoice CRUD operations, status transitions, and offline-first sync.
+ * 
+ * @module useInvoices
+ * 
+ * State Management Pattern:
+ * - Loads invoices from local storage immediately on mount
+ * - Fetches from API when user is authenticated
+ * - Manages current invoice for editing
+ * - Clears state on logout
+ * 
+ * Error Handling Pattern:
+ * - Catches all errors from service layer
+ * - Displays user-friendly toast notifications
+ * - Handles authentication errors with redirect
+ * 
+ * Invoice Lifecycle:
+ * - draft → issued → paid
+ * - Validates items before finalization
+ * - Calculates total amount automatically
+ * 
+ * @returns {Object} Invoice state and operations
+ * @property {Invoice[]} invoices - Array of all invoices
+ * @property {Invoice | null} currentInvoice - Currently selected invoice
+ * @property {boolean} loading - Loading state indicator
+ * @property {Error | null} error - Current error state
+ * @property {Function} createInvoice - Creates a new draft invoice
+ * @property {Function} saveInvoice - Saves invoice (create or update)
+ * @property {Function} finalizeInvoice - Changes status to 'issued'
+ * @property {Function} markAsPaid - Changes status to 'paid'
+ * @property {Function} deleteInvoice - Deletes an invoice
+ * @property {Function} refreshInvoices - Refreshes invoices from API
+ */
 
 import { useState, useEffect } from 'react';
 import { Invoice, InvoiceItem } from '@/types';
 import { generateId } from '@/lib/formatter';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import { useToast } from '@/components/ui/use-toast';
 import {
   fetchInvoicesFromAPI,
-  addInvoiceToAPI,
-  updateInvoiceInAPI,
-  deleteInvoiceFromAPI,
-  getInvoicesFromStorage,
-  addInvoiceToStorage,
-  updateInvoiceInStorage,
-  deleteInvoiceFromStorage
+  getFromStorage,
+  deleteFromAPI,
+  deleteFromStorage,
+  syncEntity,
 } from '@/services/invoiceService';
+import { AppError, getUserMessage, logError } from '@/lib/errorHandler';
+import { useAuthErrorHandler } from './useAuthErrorHandler';
+import { canAddInvoice } from '@/lib/limitChecker';
 
 export const useInvoices = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [currentInvoice, setCurrentInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const { user } = useAuth();
+  const { organization } = useOrganization();
   const { toast } = useToast();
+  const { handleError: handleAuthError } = useAuthErrorHandler();
 
   useEffect(() => {
-    // Load invoices
-    const storedInvoices = getInvoicesFromStorage();
-    setInvoices(storedInvoices);
+    // Load invoices from offline storage (scoped by organization)
+    try {
+      const storedInvoices = getFromStorage(organization?.id);
+      setInvoices(storedInvoices);
+    } catch (err) {
+      console.error('Error loading invoices from storage:', err);
+    }
     
-    // If user is authenticated, fetch data from Supabase
-    if (user) {
+    // If user is authenticated and has an organization, fetch data from Supabase
+    if (user && organization) {
       fetchInvoices();
     } else {
+      // Clear state when user logs out or has no organization
+      setInvoices([]);
+      setCurrentInvoice(null);
       setLoading(false);
     }
-  }, [user]);
+  }, [user, organization]);
   
   const fetchInvoices = async () => {
-    if (!user) return;
+    if (!user || !organization?.id) return;
     
     try {
       setLoading(true);
       setError(null);
       
-      const fetchedInvoices = await fetchInvoicesFromAPI(user.id);
+      const fetchedInvoices = await fetchInvoicesFromAPI(user.id, organization.id);
       setInvoices(fetchedInvoices);
       
     } catch (err) {
       console.error('Error fetching invoices:', err);
       setError(err instanceof Error ? err : new Error('Unknown error fetching invoices'));
-      
-      toast({
-        title: "Error",
-        description: "Failed to load invoice data. Please try again later.",
-        variant: "destructive",
-      });
+      handleAuthError(err, "Failed to load invoice data. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -69,7 +111,8 @@ export const useInvoices = () => {
       items: [],
       totalAmount: 0,
       status: 'draft',
-      synced: false
+      synced: false,
+      lastModified: new Date().toISOString()
     };
   };
 
@@ -78,66 +121,95 @@ export const useInvoices = () => {
   };
 
   const saveInvoice = async (invoice: Invoice): Promise<boolean> => {
+    if (!user?.id) {
+      toast({
+        title: "Authentication Required",
+        description: "You must be logged in to save invoices.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!organization?.id) {
+      toast({
+        title: "Organization Required",
+        description: "You must belong to an organization to save invoices.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    const isNew = !invoices.some(inv => inv.id === invoice.id);
+    
+    // Check invoice limit before creating new invoice
+    if (isNew) {
+      try {
+        const canAdd = await canAddInvoice(organization.id);
+        if (!canAdd) {
+          setShowUpgradePrompt(true);
+          toast({
+            title: "Invoice Limit Reached",
+            description: "You've reached your plan's monthly invoice limit. Please upgrade to create more invoices.",
+            variant: "destructive",
+          });
+          return false;
+        }
+      } catch (err) {
+        console.error("Error checking invoice limit:", err);
+        // Continue with invoice creation if limit check fails
+      }
+    }
+
     try {
       setLoading(true);
+      setError(null);
       
       const updatedInvoice = {
         ...invoice,
         totalAmount: calculateTotalAmount(invoice.items),
         synced: false,
+        lastModified: new Date().toISOString(),
       };
       
-      const isNew = !invoices.some(inv => inv.id === updatedInvoice.id);
+      const operation = isNew ? 'create' : 'update';
       
-      // If user is authenticated, store in Supabase
-      if (user) {
-        try {
-          if (isNew) {
-            const syncedInvoice = await addInvoiceToAPI(updatedInvoice, user.id);
-            updatedInvoice.synced = syncedInvoice.synced;
-          } else {
-            const syncedInvoice = await updateInvoiceInAPI(updatedInvoice);
-            updatedInvoice.synced = syncedInvoice.synced;
-          }
-          
+      // Use syncEntity to handle both API and storage
+      const result = await syncEntity(updatedInvoice, user.id, operation, organization.id);
+
+      if (result.success && result.data) {
+        // Update state with the synced invoice
+        if (isNew) {
+          setInvoices([...invoices, result.data]);
+        } else {
+          setInvoices(invoices.map(inv => inv.id === result.data!.id ? result.data! : inv));
+        }
+
+        // Update current invoice
+        setCurrentInvoice(result.data);
+
+        // Show appropriate message based on sync status
+        if (result.synced) {
           toast({
             title: "Success",
-            description: `Invoice ${isNew ? 'created' : 'updated'} successfully`,
+            description: `Invoice ${isNew ? 'created' : 'updated'} successfully.`,
             variant: "default",
           });
-        } catch (err) {
-          console.error(`Error ${isNew ? 'saving' : 'updating'} invoice to Supabase:`, err);
+        } else {
           toast({
-            title: "Sync Error",
-            description: `Invoice ${isNew ? 'saved' : 'updated'} locally but failed to sync`,
-            variant: "destructive",
+            title: "Saved Locally",
+            description: `Invoice ${isNew ? 'saved' : 'updated'}. Will sync when connection is restored.`,
+            variant: "default",
           });
         }
+        
+        return true;
       }
 
-      // Update local storage
-      if (isNew) {
-        addInvoiceToStorage(updatedInvoice);
-        setInvoices([...invoices, updatedInvoice]);
-      } else {
-        updateInvoiceInStorage(updatedInvoice);
-        setInvoices(invoices.map(inv => inv.id === updatedInvoice.id ? updatedInvoice : inv));
-      }
-
-      // Update current invoice
-      setCurrentInvoice(updatedInvoice);
-      
-      return true;
+      return false;
     } catch (err) {
       console.error('Error saving invoice:', err);
       setError(err instanceof Error ? err : new Error('Unknown error saving invoice'));
-      
-      toast({
-        title: "Error",
-        description: "Failed to save invoice. Please try again.",
-        variant: "destructive",
-      });
-      
+      handleAuthError(err, "Failed to save invoice. Please try again.");
       return false;
     } finally {
       setLoading(false);
@@ -153,56 +225,66 @@ export const useInvoices = () => {
       });
       return false;
     }
+
+    if (!user?.id) {
+      toast({
+        title: "Authentication Required",
+        description: "You must be logged in to finalize invoices.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!organization?.id) {
+      toast({
+        title: "Organization Required",
+        description: "You must belong to an organization to finalize invoices.",
+        variant: "destructive",
+      });
+      return false;
+    }
     
     try {
       setLoading(true);
+      setError(null);
       
       const updatedInvoice = {
         ...invoice,
         status: 'issued' as const,
         synced: false,
+        lastModified: new Date().toISOString(),
       };
       
-      // Update local storage and state before API call
-      updateInvoiceInStorage(updatedInvoice);
-      setInvoices(invoices.map(inv => inv.id === updatedInvoice.id ? updatedInvoice : inv));
-      
-      // If user is authenticated, update in Supabase
-      if (user) {
-        try {
-          const syncedInvoice = await updateInvoiceInAPI(updatedInvoice);
-          updatedInvoice.synced = syncedInvoice.synced;
-          
-          // Update state again with synced status
-          setInvoices(invoices.map(inv => inv.id === updatedInvoice.id ? updatedInvoice : inv));
-          updateInvoiceInStorage(updatedInvoice);
-          
+      // Use syncEntity to handle both API and storage
+      const result = await syncEntity(updatedInvoice, user.id, 'update', organization.id);
+
+      if (result.success && result.data) {
+        // Update state with the synced invoice
+        setInvoices(invoices.map(inv => inv.id === result.data!.id ? result.data! : inv));
+
+        // Show appropriate message based on sync status
+        if (result.synced) {
           toast({
             title: "Success",
-            description: "Invoice finalized successfully",
+            description: "Invoice finalized successfully.",
             variant: "default",
           });
-        } catch (err) {
-          console.error('Error finalizing invoice in Supabase:', err);
+        } else {
           toast({
-            title: "Sync Error",
-            description: "Invoice finalized locally but failed to sync",
-            variant: "destructive",
+            title: "Saved Locally",
+            description: "Invoice finalized. Will sync when connection is restored.",
+            variant: "default",
           });
         }
+        
+        return true;
       }
-      
-      return true;
+
+      return false;
     } catch (err) {
       console.error('Error finalizing invoice:', err);
       setError(err instanceof Error ? err : new Error('Unknown error finalizing invoice'));
-      
-      toast({
-        title: "Error",
-        description: "Failed to finalize invoice. Please try again.",
-        variant: "destructive",
-      });
-      
+      handleAuthError(err, "Failed to finalize invoice. Please try again.");
       return false;
     } finally {
       setLoading(false);
@@ -210,55 +292,65 @@ export const useInvoices = () => {
   };
 
   const markAsPaid = async (invoice: Invoice): Promise<boolean> => {
+    if (!user?.id) {
+      toast({
+        title: "Authentication Required",
+        description: "You must be logged in to mark invoices as paid.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!organization?.id) {
+      toast({
+        title: "Organization Required",
+        description: "You must belong to an organization to mark invoices as paid.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     try {
       setLoading(true);
+      setError(null);
       
       const updatedInvoice = {
         ...invoice,
         status: 'paid' as const,
         synced: false,
+        lastModified: new Date().toISOString(),
       };
       
-      // Update local storage and state before API call
-      updateInvoiceInStorage(updatedInvoice);
-      setInvoices(invoices.map(inv => inv.id === updatedInvoice.id ? updatedInvoice : inv));
-      
-      // If user is authenticated, update in Supabase
-      if (user) {
-        try {
-          const syncedInvoice = await updateInvoiceInAPI(updatedInvoice);
-          updatedInvoice.synced = syncedInvoice.synced;
-          
-          // Update state again with synced status
-          setInvoices(invoices.map(inv => inv.id === updatedInvoice.id ? updatedInvoice : inv));
-          updateInvoiceInStorage(updatedInvoice);
-          
+      // Use syncEntity to handle both API and storage
+      const result = await syncEntity(updatedInvoice, user.id, 'update', organization.id);
+
+      if (result.success && result.data) {
+        // Update state with the synced invoice
+        setInvoices(invoices.map(inv => inv.id === result.data!.id ? result.data! : inv));
+
+        // Show appropriate message based on sync status
+        if (result.synced) {
           toast({
             title: "Success",
-            description: "Invoice marked as paid successfully",
+            description: "Invoice marked as paid successfully.",
             variant: "default",
           });
-        } catch (err) {
-          console.error('Error marking invoice as paid in Supabase:', err);
+        } else {
           toast({
-            title: "Sync Error",
-            description: "Invoice marked as paid locally but failed to sync",
-            variant: "destructive",
+            title: "Saved Locally",
+            description: "Invoice marked as paid. Will sync when connection is restored.",
+            variant: "default",
           });
         }
+        
+        return true;
       }
-      
-      return true;
+
+      return false;
     } catch (err) {
       console.error('Error marking invoice as paid:', err);
       setError(err instanceof Error ? err : new Error('Unknown error marking invoice as paid'));
-      
-      toast({
-        title: "Error",
-        description: "Failed to mark invoice as paid. Please try again.",
-        variant: "destructive",
-      });
-      
+      handleAuthError(err, "Failed to mark invoice as paid. Please try again.");
       return false;
     } finally {
       setLoading(false);
@@ -266,31 +358,49 @@ export const useInvoices = () => {
   };
 
   const deleteInvoice = async (invoiceId: string): Promise<boolean> => {
+    if (!user?.id) {
+      toast({
+        title: "Authentication Required",
+        description: "You must be logged in to delete invoices.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!organization?.id) {
+      toast({
+        title: "Organization Required",
+        description: "You must belong to an organization to delete invoices.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     try {
       setLoading(true);
+      setError(null);
 
-      // If user is authenticated, delete from Supabase
-      if (user) {
-        try {
-          await deleteInvoiceFromAPI(invoiceId);
-          
-          toast({
-            title: "Success",
-            description: "Invoice deleted successfully",
-            variant: "default",
-          });
-        } catch (err) {
-          console.error('Error deleting invoice from Supabase:', err);
-          toast({
-            title: "Sync Error",
-            description: "Invoice deleted locally but failed to sync",
-            variant: "destructive",
-          });
-        }
+      // Try to delete from API first
+      try {
+        await deleteFromAPI(invoiceId, organization.id);
+        
+        toast({
+          title: "Success",
+          description: "Invoice deleted successfully.",
+          variant: "default",
+        });
+      } catch (apiError) {
+        console.warn('Failed to delete from API, deleting locally:', apiError);
+        
+        toast({
+          title: "Deleted Locally",
+          description: "Invoice deleted locally. Will sync when connection is restored.",
+          variant: "default",
+        });
       }
 
-      // Delete from local storage
-      deleteInvoiceFromStorage(invoiceId);
+      // Always delete from local storage (scoped by organization)
+      deleteFromStorage(invoiceId, organization.id);
 
       // Update state
       setInvoices(invoices.filter(invoice => invoice.id !== invoiceId));
@@ -304,21 +414,15 @@ export const useInvoices = () => {
     } catch (err) {
       console.error('Error deleting invoice:', err);
       setError(err instanceof Error ? err : new Error('Unknown error deleting invoice'));
-      
-      toast({
-        title: "Error",
-        description: "Failed to delete invoice. Please try again.",
-        variant: "destructive",
-      });
-      
+      handleAuthError(err, "Failed to delete invoice. Please try again.");
       return false;
     } finally {
       setLoading(false);
     }
   };
 
-  const refreshInvoices = () => {
-    fetchInvoices();
+  const refreshInvoices = async (): Promise<void> => {
+    await fetchInvoices();
   };
 
   return {
@@ -334,5 +438,7 @@ export const useInvoices = () => {
     loading,
     error,
     refreshInvoices,
+    showUpgradePrompt,
+    setShowUpgradePrompt,
   };
 };

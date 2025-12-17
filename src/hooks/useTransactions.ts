@@ -1,85 +1,102 @@
+/**
+ * useTransactions Hook
+ * 
+ * React hook for managing transaction state and operations in the application.
+ * Handles transaction CRUD operations, offline-first sync, and data validation.
+ * 
+ * @module useTransactions
+ * 
+ * State Management Pattern:
+ * - Loads transactions from local storage immediately on mount
+ * - Fetches from API when user is authenticated
+ * - Clears state on logout
+ * - Sorts transactions by date (newest first)
+ * 
+ * Error Handling Pattern:
+ * - Catches all errors from service layer
+ * - Displays user-friendly toast notifications
+ * - Handles authentication errors with redirect
+ * - Validates required fields before operations
+ * 
+ * Transaction Types:
+ * - sale: Revenue from sales
+ * - purchase: Inventory purchases
+ * - expense: Business expenses
+ * 
+ * @returns {Object} Transaction state and operations
+ * @property {Transaction[]} transactions - Array of all transactions
+ * @property {boolean} loading - Loading state indicator
+ * @property {Error | null} error - Current error state
+ * @property {Function} addTransaction - Creates a new transaction
+ * @property {Function} updateTransaction - Updates an existing transaction
+ * @property {Function} deleteTransaction - Deletes a transaction
+ * @property {Function} refreshTransactions - Refreshes transactions from API
+ */
 
 import { useState, useEffect } from 'react';
 import { Transaction } from '@/types';
-import { getStoredItems, addItem, STORAGE_KEYS } from '@/lib/offlineStorage';
 import { generateId } from '@/lib/formatter';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-
-// Separate data model for Supabase insert operations
-type SupabaseTransaction = {
-  id: string;
-  amount: number;
-  description: string | null;
-  date: string;
-  type: string;
-  category?: string | null;
-  reference?: string | null;
-  product_id?: string | null;
-  quantity?: number | null;
-  user_id: string;
-};
+import { useAuth } from '@/contexts/AuthContext';
+import { useOrganization } from '@/contexts/OrganizationContext';
+import { useToast } from '@/components/ui/use-toast';
+import {
+  fetchFromAPI,
+  getFromStorage,
+  deleteFromAPI,
+  deleteFromStorage,
+  syncEntity,
+} from '@/services/transactionService';
+import { AppError, getUserMessage, logError } from '@/lib/errorHandler';
+import { useAuthErrorHandler } from './useAuthErrorHandler';
 
 export function useTransactions() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const { user } = useAuth();
+  const { organization } = useOrganization();
   const { toast } = useToast();
+  const { handleError: handleAuthError } = useAuthErrorHandler();
 
   useEffect(() => {
-    loadTransactions();
-  }, []);
-
-  // Separated data fetching logic
-  async function loadTransactions() {
-    setLoading(true);
-    setError(null);
-    
+    // Load transactions from offline storage (scoped by organization)
     try {
-      // Try to load from Supabase first
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .order('date', { ascending: false });
-
-      if (error) {
-        console.error('Error loading transactions from Supabase:', error);
-        // Fall back to local storage
-        const storedTransactions = getStoredItems<Transaction>(STORAGE_KEYS.TRANSACTIONS);
-        setTransactions(storedTransactions);
-        throw new Error(`Failed to load from Supabase: ${error.message}`);
-      } 
-      
-      if (data) {
-        // Map Supabase data to our Transaction type
-        const mappedTransactions: Transaction[] = data.map(item => ({
-          id: item.id,
-          amount: Number(item.amount),
-          description: item.description || '',
-          date: item.date,
-          type: item.type as 'sale' | 'purchase' | 'expense',
-          category: item.category || undefined,
-          reference: item.reference || undefined,
-          synced: true,
-        }));
-        setTransactions(mappedTransactions);
-      }
-    } catch (err) {
-      console.error('Failed to load transactions:', err);
-      // Set error state but still try to load from local storage as fallback
-      setError(err instanceof Error ? err : new Error('Unknown error loading transactions'));
-      
-      // Fall back to local storage
-      const storedTransactions = getStoredItems<Transaction>(STORAGE_KEYS.TRANSACTIONS);
+      const storedTransactions = getFromStorage(organization?.id);
       setTransactions(storedTransactions);
+    } catch (err) {
+      console.error("Error loading transactions from storage:", err);
+    }
+
+    // If user is authenticated and has an organization, fetch data from Supabase
+    if (user && organization) {
+      fetchTransactions();
+    } else {
+      // Clear state when user logs out or has no organization
+      setTransactions([]);
+      setLoading(false);
+    }
+  }, [user, organization?.id]);
+
+  const fetchTransactions = async () => {
+    if (!user || !organization?.id) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const fetchedTransactions = await fetchFromAPI(user.id, organization.id);
+      setTransactions(fetchedTransactions);
+    } catch (err) {
+      console.error("Error fetching transactions:", err);
+      setError(err instanceof Error ? err : new Error("Unknown error fetching transactions"));
+      handleAuthError(err, "Failed to load transaction data. Please try again later.");
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  // Validate transaction data
-  function validateTransaction(transaction: Partial<Transaction>): boolean {
-    if (!transaction.amount || !transaction.description || !transaction.date || !transaction.type) {
+  const addTransaction = async (newTransaction: Partial<Transaction>): Promise<boolean> => {
+    if (!newTransaction.amount || !newTransaction.description || !newTransaction.date || !newTransaction.type) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields",
@@ -87,101 +104,215 @@ export function useTransactions() {
       });
       return false;
     }
-    return true;
-  }
 
-  // Prepare transaction for Supabase
-  function prepareTransactionForSupabase(transaction: Transaction): SupabaseTransaction {
-    return {
-      id: transaction.id,
-      amount: transaction.amount,
-      description: transaction.description,
-      date: transaction.date,
-      type: transaction.type,
-      category: transaction.category,
-      reference: transaction.reference,
-      // Hardcoded anonymous user ID for demo purposes
-      // In a real app, you would get this from auth context
-      user_id: '00000000-0000-0000-0000-000000000000',
-    };
-  }
-
-  async function addTransaction(newTransaction: Partial<Transaction>): Promise<boolean> {
-    if (!validateTransaction(newTransaction)) {
+    if (!user?.id) {
+      toast({
+        title: "Authentication Required",
+        description: "You must be logged in to add transactions.",
+        variant: "destructive",
+      });
       return false;
     }
 
-    // TypeScript type assertion for transaction.type
-    const transactionType = newTransaction.type as 'sale' | 'purchase' | 'expense';
-
-    const transaction: Transaction = {
-      id: generateId(),
-      amount: Number(newTransaction.amount),
-      description: newTransaction.description || '',
-      date: newTransaction.date || '',
-      type: transactionType,
-      category: newTransaction.category,
-      reference: newTransaction.reference,
-      synced: false,
-    };
+    if (!organization?.id) {
+      toast({
+        title: "Organization Required",
+        description: "You must belong to an organization to add transactions.",
+        variant: "destructive",
+      });
+      return false;
+    }
 
     try {
-      // Prepare data for Supabase
-      const supabaseTransaction = prepareTransactionForSupabase(transaction);
-      
-      // Try to add to Supabase first
-      const { data, error } = await supabase
-        .from('transactions')
-        .insert(supabaseTransaction)
-        .select();
+      setLoading(true);
+      setError(null);
 
-      if (error) {
-        console.error('Error adding transaction to Supabase:', error);
-        // Fall back to local storage
-        addItem<Transaction>(STORAGE_KEYS.TRANSACTIONS, transaction);
-        setTransactions(prev => [transaction, ...prev]);
+      const transaction: Transaction = {
+        id: generateId(),
+        amount: Number(newTransaction.amount),
+        description: newTransaction.description,
+        date: newTransaction.date,
+        type: newTransaction.type as 'sale' | 'purchase' | 'expense',
+        category: newTransaction.category,
+        reference: newTransaction.reference,
+        synced: false,
+        lastModified: new Date().toISOString(),
+      };
+
+      // Use syncEntity to handle both API and storage
+      const result = await syncEntity(transaction, user.id, 'create', organization.id);
+
+      if (result.success && result.data) {
+        // Update state with the synced transaction
+        setTransactions([result.data, ...transactions]);
+
+        // Show appropriate message based on sync status
+        if (result.synced) {
+          toast({
+            title: "Success",
+            description: "Transaction added successfully.",
+            variant: "default",
+          });
+        } else {
+          toast({
+            title: "Saved Locally",
+            description: "Transaction saved. Will sync when connection is restored.",
+            variant: "default",
+          });
+        }
+
+        return true;
+      }
+
+      return false;
+    } catch (err) {
+      console.error("Error adding transaction:", err);
+      setError(err instanceof Error ? err : new Error("Unknown error adding transaction"));
+      handleAuthError(err, "Failed to add transaction. Please try again.");
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateTransaction = async (updatedTransaction: Transaction): Promise<boolean> => {
+    if (!updatedTransaction.id) {
+      toast({
+        title: "Error",
+        description: "Cannot update transaction without an ID",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!user?.id) {
+      toast({
+        title: "Authentication Required",
+        description: "You must be logged in to update transactions.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!organization?.id) {
+      toast({
+        title: "Organization Required",
+        description: "You must belong to an organization to update transactions.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Use syncEntity to handle both API and storage
+      const result = await syncEntity(updatedTransaction, user.id, 'update', organization.id);
+
+      if (result.success && result.data) {
+        // Update state with the synced transaction
+        setTransactions(transactions.map((t) => (t.id === result.data!.id ? result.data! : t)));
+
+        // Show appropriate message based on sync status
+        if (result.synced) {
+          toast({
+            title: "Success",
+            description: "Transaction updated successfully.",
+            variant: "default",
+          });
+        } else {
+          toast({
+            title: "Saved Locally",
+            description: "Transaction updated. Will sync when connection is restored.",
+            variant: "default",
+          });
+        }
+
+        return true;
+      }
+
+      return false;
+    } catch (err) {
+      console.error("Error updating transaction:", err);
+      setError(err instanceof Error ? err : new Error("Unknown error updating transaction"));
+      handleAuthError(err, "Failed to update transaction. Please try again.");
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteTransaction = async (transactionId: string): Promise<boolean> => {
+    if (!user?.id) {
+      toast({
+        title: "Authentication Required",
+        description: "You must be logged in to delete transactions.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!organization?.id) {
+      toast({
+        title: "Organization Required",
+        description: "You must belong to an organization to delete transactions.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Try to delete from API first
+      try {
+        await deleteFromAPI(transactionId);
         
         toast({
-          title: "Transaction Added Offline",
-          description: "Your transaction has been saved locally and will sync when you're back online",
+          title: "Success",
+          description: "Transaction deleted successfully.",
+          variant: "default",
         });
-      } else if (data) {
-        // Mark as synced and update with the returned data
-        const syncedTransaction: Transaction = {
-          ...transaction,
-          synced: true,
-        };
-        setTransactions(prev => [syncedTransaction, ...prev]);
+      } catch (apiError) {
+        console.warn("Failed to delete from API, deleting locally:", apiError);
         
         toast({
-          title: "Transaction Added",
-          description: "Your transaction has been recorded successfully",
+          title: "Deleted Locally",
+          description: "Transaction deleted locally. Will sync when connection is restored.",
+          variant: "default",
         });
       }
-      
+
+      // Always delete from local storage (scoped by organization)
+      deleteFromStorage(transactionId, organization.id);
+
+      // Update state
+      setTransactions(transactions.filter((transaction) => transaction.id !== transactionId));
+
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error adding transaction'));
-      console.error('Failed to add transaction:', err);
-      
-      // Fall back to local storage
-      addItem<Transaction>(STORAGE_KEYS.TRANSACTIONS, transaction);
-      setTransactions(prev => [transaction, ...prev]);
-      
-      toast({
-        title: "Transaction Added Offline",
-        description: "Your transaction has been saved locally and will sync when you're back online",
-      });
-      
-      return true;
+      console.error("Error deleting transaction:", err);
+      setError(err instanceof Error ? err : new Error("Unknown error deleting transaction"));
+      handleAuthError(err, "Failed to delete transaction. Please try again.");
+      return false;
+    } finally {
+      setLoading(false);
     }
-  }
+  };
+
+  const refreshTransactions = async (): Promise<void> => {
+    await fetchTransactions();
+  };
 
   return {
     transactions,
     loading,
     error,
     addTransaction,
-    refreshTransactions: loadTransactions,
+    updateTransaction,
+    deleteTransaction,
+    refreshTransactions,
   };
 }

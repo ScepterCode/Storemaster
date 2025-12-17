@@ -64,8 +64,16 @@ const ProductDialog = ({
           <div className="grid gap-2">
             <Label htmlFor="category">Category <span className="text-destructive">*</span></Label>
             <Select 
-              value={newProduct.category || ''} 
-              onValueChange={(value) => setNewProduct({ ...newProduct, category: value })}
+              value={newProduct.category_id || newProduct.category || ''} 
+              onValueChange={(value) => {
+                const selectedCategory = categories.find(c => c.id === value);
+                setNewProduct({ 
+                  ...newProduct, 
+                  category_id: value,
+                  category: selectedCategory?.name || value,
+                  categoryName: selectedCategory?.name
+                });
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select a category" />
@@ -92,7 +100,7 @@ const ProductDialog = ({
           <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
           <Button
             onClick={handleAddProduct}
-            disabled={!newProduct.name || !newProduct.unitPrice || !newProduct.category}
+            disabled={!newProduct.name || !newProduct.unitPrice || (!newProduct.category_id && !newProduct.category)}
           >
             Save Product
           </Button>

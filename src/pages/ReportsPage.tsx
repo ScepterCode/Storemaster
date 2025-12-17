@@ -26,6 +26,7 @@ import {
   Line,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import FeatureGuard from "@/components/auth/FeatureGuard";
 
 const COLORS = [
   "#0088FE",
@@ -218,13 +219,14 @@ const ReportsPage = () => {
 
   return (
     <AppLayout>
-      <div className="space-y-6 animate-fade-in">
-        <div>
-          <h1 className="text-2xl font-bold">Business Reports</h1>
-          <p className="text-muted-foreground">
-            Analyze your business performance with visual reports
-          </p>
-        </div>
+      <FeatureGuard feature="advanced_reports">
+        <div className="space-y-6 animate-fade-in">
+          <div>
+            <h1 className="text-2xl font-bold">Business Reports</h1>
+            <p className="text-muted-foreground">
+              Analyze your business performance with visual reports
+            </p>
+          </div>
 
         <Tabs defaultValue="overview" className="w-full">
           <TabsList>
@@ -448,6 +450,7 @@ const ReportsPage = () => {
           </TabsContent>
         </Tabs>
       </div>
+      </FeatureGuard>
     </AppLayout>
   );
 };

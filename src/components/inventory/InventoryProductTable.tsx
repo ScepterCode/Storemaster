@@ -81,10 +81,10 @@ const InventoryProductTable = ({
                   )}
                 </TableCell>
                 <TableCell>
-                  {product.category ? (
+                  {product.categoryName || product.category_id ? (
                     <div className="flex items-center">
                       <Tag className="h-4 w-4 mr-1" />
-                      {categories.find(c => c.id === product.category)?.name || "Unknown"}
+                      {product.categoryName || categories.find(c => c.id === product.category_id)?.name || "Unknown"}
                     </div>
                   ) : (
                     "-"
