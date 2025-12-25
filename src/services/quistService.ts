@@ -1259,11 +1259,15 @@ export async function processQuery(
   // Step 1.5: Handle unknown intents - try to answer with AI before showing suggestions
   if (classification.intent === 'unknown' || classification.confidence < 0.3) {
     console.log(`Unknown intent detected for query: "${query}" (confidence: ${classification.confidence})`);
+    console.log('Attempting AI fallback...');
     
     // Try to answer the question using AI with available data context
     try {
       const aiResponse = await answerWithAI(query, organizationId, context);
+      console.log('AI fallback response:', aiResponse ? 'Success' : 'No response');
+      
       if (aiResponse) {
+        console.log('Returning AI-generated response');
         return {
           type: 'text',
           text: aiResponse,
@@ -1280,11 +1284,17 @@ export async function processQuery(
           },
         };
       }
+      console.log('AI response was null or too short, falling back to suggestions');
     } catch (error) {
-      console.error('AI fallback failed:', error);
+      console.error('AI fallback failed with error:', error);
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
     }
     
     // If AI fails, show suggestions
+    console.log('Showing suggestion fallback');
     return handleUnknownIntentWithContext(query, context, Date.now() - startTime);
   }
 
