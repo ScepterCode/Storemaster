@@ -11,7 +11,7 @@
  * @module quistService
  */
 
-import { geminiService } from './geminiService';
+import { openaiService } from './openaiService';
 import {
   getTopSellingProducts,
   getTodayRevenue,
@@ -440,7 +440,7 @@ Current user question: ${query}`;
       prompt = INTENT_CLASSIFICATION_PROMPT + query;
     }
 
-    const response = await geminiService.generateContent({
+    const response = await openaiService.generateContent({
       prompt,
       temperature: 0.1, // Low temperature for consistent classification
       max_tokens: 256,
@@ -836,7 +836,7 @@ export async function generateResponse(
       .replace('{data}', formatDataForPrompt(intent, data))
       .replace('{dateRange}', params.dateRange || 'not specified');
 
-    const response = await geminiService.generateContent({
+    const response = await openaiService.generateContent({
       prompt,
       temperature: 0.7,
       max_tokens: 512,
@@ -1218,7 +1218,7 @@ Use plain text, no markdown formatting.
 
 Response:`;
 
-    const response = await geminiService.generateContent({
+    const response = await openaiService.generateContent({
       prompt,
       temperature: 0.7,
       max_tokens: 300,
