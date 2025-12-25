@@ -290,10 +290,27 @@ Generate a helpful response:`,
 
 /**
  * Keyword-based fallback intent detection
- * Used when Gemini API fails or is unavailable
+ * Used when AI API fails or is unavailable
  */
 function classifyIntentByKeywords(query: string): IntentClassificationResult {
   const queryLower = query.toLowerCase();
+  
+  // Product listing patterns (what products, goods in store, etc.)
+  if (
+    (queryLower.includes('what') || queryLower.includes('show') || queryLower.includes('list')) &&
+    (queryLower.includes('product') || queryLower.includes('goods') || queryLower.includes('item') || queryLower.includes('stock')) &&
+    (queryLower.includes('store') || queryLower.includes('have') || queryLower.includes('inventory'))
+  ) {
+    return {
+      intent: 'top_selling_products',
+      params: {
+        dateRange: 'this_month',
+        limit: 10,
+      },
+      confidence: 0.7,
+      originalQuery: query,
+    };
+  }
   
   // Top selling products patterns
   if (
