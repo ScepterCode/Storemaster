@@ -1,3 +1,5 @@
+// Re-export Quist types
+export * from './quist';
 
 export interface SyncableEntity {
   id: string;
@@ -24,6 +26,51 @@ export interface Product extends SyncableEntity {
   category_id?: string; // Foreign key to categories table
   categoryName?: string; // Populated from join with categories table
   description?: string;
+  barcode?: string; // Barcode for scanner integration
+  batchTrackingEnabled?: boolean; // Whether this product uses batch tracking
+  defaultShelfLifeDays?: number; // Default shelf life for new batches
+  reorderPoint?: number; // Minimum stock level before reorder alert
+}
+
+export interface ProductBatch extends SyncableEntity {
+  productId: string;
+  batchNumber: string;
+  quantityReceived: number;
+  quantityCurrent: number;
+  unitCost?: number;
+  receivedDate: string;
+  expiryDate?: string;
+  supplierName?: string;
+  supplierReference?: string;
+  notes?: string;
+}
+
+export interface BatchMovement extends SyncableEntity {
+  batchId: string;
+  movementType: 'in' | 'out' | 'adjustment' | 'expired' | 'damaged';
+  quantity: number; // Positive for in, negative for out
+  referenceType?: string; // 'sale', 'purchase', 'adjustment', etc.
+  referenceId?: string;
+  unitCost?: number;
+  notes?: string;
+  movementDate: string;
+}
+
+export interface BatchAllocation {
+  batchId: string;
+  allocatedQuantity: number;
+  unitCost?: number;
+}
+
+export interface ProductBatchSummary {
+  productId: string;
+  productName: string;
+  totalBatches: number;
+  totalQuantity: number;
+  earliestExpiry?: string;
+  expiringSoonCount: number;
+  expiredCount: number;
+  averageCost?: number;
 }
 
 export interface Customer extends SyncableEntity {

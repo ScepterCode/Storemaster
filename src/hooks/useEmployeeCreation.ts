@@ -23,44 +23,18 @@ export const useEmployeeCreation = () => {
     try {
       setIsCreating(true);
 
-      // Create the user account
-      const { data: userData, error: userError } = await supabase.auth.admin.createUser({
+      // Show helpful message about the workaround
+      toast.error('Direct employee creation is temporarily unavailable. Please use the manual workaround described above.');
+      
+      // Log the attempt for debugging
+      console.log('Employee creation attempted (blocked):', {
         email: newEmployee.email,
-        password: newEmployee.password,
-        email_confirm: true,
+        role: newEmployee.role,
+        permissions: customPermissions,
+        note: 'This requires server-side Edge Function deployment'
       });
 
-      if (userError) throw userError;
-
-      // Set the user role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userData.user.id,
-          role: newEmployee.role,
-        });
-
-      if (roleError) throw roleError;
-
-      // Set custom permissions if any - filter and cast to database types
-      const permissionsToSet = Object.entries(customPermissions)
-        .filter(([_, granted]) => granted)
-        .map(([permission]) => ({
-          user_id: userData.user.id,
-          permission: permission as DatabasePermission,
-          granted: true,
-        }));
-
-      if (permissionsToSet.length > 0) {
-        const { error: permError } = await supabase
-          .from('user_permissions')
-          .insert(permissionsToSet);
-
-        if (permError) throw permError;
-      }
-
-      toast.success('Employee account created successfully');
-      return true;
+      return false;
 
     } catch (error) {
       console.error('Error creating employee:', error);

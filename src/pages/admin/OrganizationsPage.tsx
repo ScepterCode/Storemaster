@@ -5,10 +5,11 @@
  * Requirements: 1.1, 1.2, 1.3, 1.4
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminService } from '@/services/adminService';
 import { Organization } from '@/types/admin';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,20 +62,61 @@ const OrganizationsPage = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    slug: string;
+    email: string;
+    phone: string;
+    subscription_tier: 'free' | 'basic' | 'pro' | 'enterprise';
+  }>({
     name: '',
     slug: '',
     email: '',
     phone: '',
-    subscription_tier: 'free' as const,
+    subscription_tier: 'free',
   });
   const [submitting, setSubmitting] = useState(false);
 
   // Load organizations
-  useEffect(() => {
-    loadOrganizations();
+  const loadOrganizations = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await adminService.getAllOrganizations();
+      setOrganizations(data);
+    } catch (error) {
+      console.error('Error loading organizations:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load organizations',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    loadOrganizations();
+  }, [loadOrganizations]);
+
+  // Set up real-time subscription for organizations
+  useEffect(() => {
+    const channel = supabase
+      .channel('organizations-list-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'organizations' },
+        (payload) => {
+          console.log('Organizations changed:', payload);
+          loadOrganizations();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadOrganizations]);
   // Filter organizations
   useEffect(() => {
     let filtered = organizations;
@@ -101,23 +143,6 @@ const OrganizationsPage = () => {
 
     setFilteredOrgs(filtered);
   }, [organizations, searchQuery, statusFilter, tierFilter]);
-
-  const loadOrganizations = async () => {
-    try {
-      setLoading(true);
-      const data = await adminService.getAllOrganizations();
-      setOrganizations(data);
-    } catch (error) {
-      console.error('Error loading organizations:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load organizations',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleCreateOrganization = async () => {
     try {

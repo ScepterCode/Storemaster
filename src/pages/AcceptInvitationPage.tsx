@@ -7,8 +7,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { invitationService } from '@/services/invitationService';
-import { OrganizationInvitation } from '@/types/admin';
+import { teamInvitationService } from '@/services/invitationService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -21,7 +20,7 @@ export default function AcceptInvitationPage() {
   
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
-  const [invitation, setInvitation] = useState<OrganizationInvitation | null>(null);
+  const [invitation, setInvitation] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -44,17 +43,11 @@ export default function AcceptInvitationPage() {
       setLoading(true);
       setError(null);
 
-      const validation = await invitationService.validateInvitation(token);
-
-      if (!validation.valid) {
-        setError(validation.error || 'Invalid invitation');
-        return;
-      }
-
-      setInvitation(validation.invitation || null);
+      const invitationData = await teamInvitationService.getInvitationByToken(token);
+      setInvitation(invitationData);
     } catch (err) {
       console.error('Error validating invitation:', err);
-      setError('Failed to validate invitation');
+      setError(err instanceof Error ? err.message : 'Failed to validate invitation');
     } finally {
       setLoading(false);
     }
@@ -67,7 +60,7 @@ export default function AcceptInvitationPage() {
       setAccepting(true);
       setError(null);
 
-      await invitationService.acceptInvitation(token, user.id);
+      await teamInvitationService.acceptInvitation(token);
       
       setSuccess(true);
 

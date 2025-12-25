@@ -7,6 +7,7 @@ import { NotificationProvider } from "./contexts/NotificationContext";
 import { SidebarProvider } from "./contexts/SidebarContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { SyncProvider } from "./contexts/SyncContext";
+import { useTrialNotification } from "./hooks/useTrialNotification";
 import DashboardPage from "./pages/DashboardPage";
 import SettingsPage from "./pages/SettingsPage";
 import LoginPage from "./pages/LoginPage";
@@ -19,6 +20,7 @@ import InventoryViewPage from "./pages/InventoryViewPage";
 import StockPage from "./pages/StockPage";
 import ReportsPage from "./pages/ReportsPage";
 import StockPredictionsPage from "./pages/StockPredictionsPage";
+import QuistPage from "./pages/QuistPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import SubscriptionGuard from "./components/auth/SubscriptionGuard";
@@ -38,12 +40,19 @@ import SubscriptionExpiredPage from "./pages/SubscriptionExpiredPage";
 import OrganizationSetup from "./pages/onboarding/OrganizationSetup";
 import SelectPlan from "./pages/onboarding/SelectPlan";
 import Welcome from "./pages/onboarding/Welcome";
-import TeamMembersPage from "./pages/TeamMembersPage";
+import SimpleTeamMembersPage from "./pages/SimpleTeamMembersPage";
 import AcceptInvitationPage from "./pages/AcceptInvitationPage";
+import JoinTeamPage from "./pages/JoinTeamPage";
 import { runMigrations } from "./lib/dataMigration";
 import { needsMultiTenantMigration, runMultiTenantMigration } from "./lib/multiTenantMigration";
 
 const queryClient = new QueryClient();
+
+// Component to handle trial notifications (must be inside providers)
+const TrialNotificationHandler: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  useTrialNotification();
+  return <>{children}</>;
+};
 
 function App() {
   // Run data migrations on app initialization
@@ -118,14 +127,16 @@ function App() {
             <NotificationProvider>
               <SidebarProvider>
                 <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
-                  <div className="min-h-screen bg-background">
-                    <Router>
+                  <TrialNotificationHandler>
+                    <div className="min-h-screen bg-background">
+                      <Router>
                         <Routes>
                     {/* Public Routes - No Auth Required */}
                     <Route path="/" element={<LandingPage />} />
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                     <Route path="/reset-password" element={<ResetPasswordPage />} />
+                    <Route path="/join-team" element={<JoinTeamPage />} />
                     <Route
                       path="/unauthorized"
                       element={<UnauthorizedPage />}
@@ -186,6 +197,14 @@ function App() {
                       }
                     />
                     <Route
+                      path="/quist"
+                      element={
+                        <ProtectedRoute>
+                          <QuistPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
                       path="/transactions"
                       element={
                         <ProtectedRoute>
@@ -206,6 +225,14 @@ function App() {
                       element={
                         <ProtectedRoute>
                           <SettingsPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/team-members"
+                      element={
+                        <ProtectedRoute requiredPermission="user_management">
+                          <SimpleTeamMembersPage />
                         </ProtectedRoute>
                       }
                     />
@@ -293,7 +320,7 @@ function App() {
                       path="/team"
                       element={
                         <ProtectedRoute>
-                          <TeamMembersPage />
+                          <SimpleTeamMembersPage />
                         </ProtectedRoute>
                       }
                     />
@@ -302,7 +329,8 @@ function App() {
                     } />
                         </Routes>
                     </Router>
-                  </div>
+                    </div>
+                  </TrialNotificationHandler>
                 </ThemeProvider>
               </SidebarProvider>
             </NotificationProvider>

@@ -89,6 +89,7 @@ export const fetchProductsFromAPI = async (userId?: string, organizationId?: str
         category_id: product.category_id,
         categoryName: product.categories?.name,
         description: product.description || undefined,
+        barcode: product.barcode || undefined,
         synced: true,
         lastModified: product.updated_at || new Date().toISOString(),
       }));
@@ -144,6 +145,7 @@ export const createInAPI = async (product: Product, userId: string, organization
         category: product.category, // Keep for backwards compatibility
         category_id: product.category_id,
         description: product.description,
+        barcode: product.barcode,
         organization_id: organizationId
       } as any);
       
@@ -235,6 +237,7 @@ export const updateInAPI = async (product: Product, expectedLastModified?: strin
         category: product.category, // Keep for backwards compatibility
         category_id: product.category_id,
         description: product.description,
+        barcode: product.barcode,
       } as any)
       .eq('id', product.id);
       
@@ -549,6 +552,162 @@ export const syncEntity = async (
       entityType: 'product',
       entityId: product.id,
       userId
+    });
+  }
+};
+/**
+ * Enables batch tracking for a product
+ * 
+ * @param {string} productId - The product ID to enable batch tracking for
+ * @param {number} [defaultShelfLifeDays] - Default shelf life in days for new batches
+ * @param {number} [reorderPoint] - Minimum stock level before reorder alert
+ * @returns {Promise<SyncResult>} Result indicating success and sync status
+ */
+export const enableBatchTracking = async (
+  productId: string,
+  defaultShelfLifeDays?: number,
+  reorderPoint?: number
+): Promise<SyncResult> => {
+  const result: SyncResult = {
+    success: false,
+    synced: false
+  };
+
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .update({
+        batch_tracking_enabled: true,
+        default_shelf_life_days: defaultShelfLifeDays,
+        reorder_point: reorderPoint,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', productId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    result.success = true;
+    result.synced = true;
+    result.data = {
+      id: data.id,
+      name: data.name,
+      quantity: data.quantity,
+      unitPrice: data.unit_price,
+      category_id: data.category_id,
+      description: data.description,
+      barcode: data.barcode,
+      batchTrackingEnabled: data.batch_tracking_enabled,
+      defaultShelfLifeDays: data.default_shelf_life_days,
+      reorderPoint: data.reorder_point,
+      synced: true,
+      lastModified: data.updated_at
+    };
+
+    return result;
+  } catch (error) {
+    result.error = error instanceof Error ? error : new Error('Failed to enable batch tracking');
+    throw handleError(error, {
+      operation: 'enableBatchTracking',
+      entityType: 'product',
+      entityId: productId
+    });
+  }
+};
+
+/**
+ * Disables batch tracking for a product
+ * Note: This will not delete existing batches, but will prevent new batch creation
+ * 
+ * @param {string} productId - The product ID to disable batch tracking for
+ * @returns {Promise<SyncResult>} Result indicating success and sync status
+ */
+export const disableBatchTracking = async (productId: string): Promise<SyncResult> => {
+  const result: SyncResult = {
+    success: false,
+    synced: false
+  };
+
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .update({
+        batch_tracking_enabled: false,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', productId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    result.success = true;
+    result.synced = true;
+    result.data = {
+      id: data.id,
+      name: data.name,
+      quantity: data.quantity,
+      unitPrice: data.unit_price,
+      category_id: data.category_id,
+      description: data.description,
+      barcode: data.barcode,
+      batchTrackingEnabled: data.batch_tracking_enabled,
+      defaultShelfLifeDays: data.default_shelf_life_days,
+      reorderPoint: data.reorder_point,
+      synced: true,
+      lastModified: data.updated_at
+    };
+
+    return result;
+  } catch (error) {
+    result.error = error instanceof Error ? error : new Error('Failed to disable batch tracking');
+    throw handleError(error, {
+      operation: 'disableBatchTracking',
+      entityType: 'product',
+      entityId: productId
+    });
+  }
+};
+
+/**
+ * Gets products that have batch tracking enabled and are running low on stock
+ * 
+ * @returns {Promise<Product[]>} Array of products below their reorder point
+ */
+export const getLowStockBatchProducts = async (): Promise<Product[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select(`
+        *,
+        categories(name)
+      `)
+      .eq('batch_tracking_enabled', true)
+      .not('reorder_point', 'is', null)
+      .filter('quantity', 'lte', 'reorder_point');
+
+    if (error) throw error;
+
+    return data.map(product => ({
+      id: product.id,
+      name: product.name,
+      quantity: product.quantity,
+      unitPrice: product.unit_price,
+      category_id: product.category_id,
+      categoryName: product.categories?.name,
+      description: product.description,
+      barcode: product.barcode,
+      batchTrackingEnabled: product.batch_tracking_enabled,
+      defaultShelfLifeDays: product.default_shelf_life_days,
+      reorderPoint: product.reorder_point,
+      synced: true,
+      lastModified: product.updated_at
+    }));
+  } catch (error) {
+    throw handleError(error, {
+      operation: 'getLowStockBatchProducts',
+      entityType: 'product'
     });
   }
 };

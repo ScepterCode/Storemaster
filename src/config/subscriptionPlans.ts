@@ -6,6 +6,23 @@
 
 import { SubscriptionPlan } from '@/types/admin';
 
+/**
+ * Trial period duration in days for free tier premium features
+ * Free users get access to Stock Predictions, Reports, and Quist for this period
+ */
+export const FREE_TIER_TRIAL_DAYS = 60; // 2 months
+
+/**
+ * Premium features available during free tier trial period
+ */
+export const FREE_TIER_TRIAL_FEATURES = [
+  'stock_predictions',
+  'advanced_reports', 
+  'quist',
+] as const;
+
+export type TrialFeature = typeof FREE_TIER_TRIAL_FEATURES[number];
+
 export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: 'free',
@@ -148,4 +165,74 @@ export const checkLimits = (
     invoices: plan.features.max_invoices_per_month === -1 ? false : (current.invoices || 0) >= plan.features.max_invoices_per_month,
     storage: plan.features.max_storage_mb === -1 ? false : (current.storage || 0) >= plan.features.max_storage_mb,
   };
+};
+
+/**
+ * Check if a free tier organization is within the trial period for premium features
+ * 
+ * @param organizationCreatedAt - The organization's created_at timestamp
+ * @returns True if within trial period, false otherwise
+ */
+export const isWithinFreeTierTrial = (organizationCreatedAt: string): boolean => {
+  const createdDate = new Date(organizationCreatedAt);
+  const now = new Date();
+  const daysSinceCreation = Math.floor(
+    (now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24)
+  );
+  return daysSinceCreation <= FREE_TIER_TRIAL_DAYS;
+};
+
+/**
+ * Get the number of days remaining in the free tier trial
+ * 
+ * @param organizationCreatedAt - The organization's created_at timestamp
+ * @returns Number of days remaining (0 if trial expired)
+ */
+export const getTrialDaysRemaining = (organizationCreatedAt: string): number => {
+  const createdDate = new Date(organizationCreatedAt);
+  const now = new Date();
+  const daysSinceCreation = Math.floor(
+    (now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24)
+  );
+  return Math.max(0, FREE_TIER_TRIAL_DAYS - daysSinceCreation);
+};
+
+/**
+ * Get the trial end date for a free tier organization
+ * 
+ * @param organizationCreatedAt - The organization's created_at timestamp
+ * @returns The date when the trial ends
+ */
+export const getTrialEndDate = (organizationCreatedAt: string): Date => {
+  const createdDate = new Date(organizationCreatedAt);
+  const trialEndDate = new Date(createdDate);
+  trialEndDate.setDate(trialEndDate.getDate() + FREE_TIER_TRIAL_DAYS);
+  return trialEndDate;
+};
+
+/**
+ * Check if a specific feature is available during the free tier trial
+ * 
+ * @param feature - The feature to check
+ * @returns True if the feature is a trial feature
+ */
+export const isTrialFeature = (feature: string): boolean => {
+  return FREE_TIER_TRIAL_FEATURES.includes(feature as TrialFeature);
+};
+
+/**
+ * Check if a free tier user has access to a trial feature
+ * 
+ * @param feature - The feature to check
+ * @param organizationCreatedAt - The organization's created_at timestamp
+ * @returns True if the user has access to the feature
+ */
+export const hasTrialFeatureAccess = (
+  feature: string,
+  organizationCreatedAt: string
+): boolean => {
+  if (!isTrialFeature(feature)) {
+    return false;
+  }
+  return isWithinFreeTierTrial(organizationCreatedAt);
 };

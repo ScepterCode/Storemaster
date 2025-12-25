@@ -5,9 +5,10 @@
  * Requirements: 7.1, 7.2, 7.3
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { adminService } from '@/services/adminService';
 import { PlatformStats } from '@/types/admin';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   ChartContainer,
@@ -59,11 +60,7 @@ const AnalyticsPage = () => {
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadPlatformStats();
-  }, []);
-
-  const loadPlatformStats = async () => {
+  const loadPlatformStats = useCallback(async () => {
     try {
       setLoading(true);
       const data = await adminService.getPlatformStats();
@@ -78,7 +75,55 @@ const AnalyticsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadPlatformStats();
+  }, [loadPlatformStats]);
+
+  // Set up real-time subscription for stats updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('analytics-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'organizations' },
+        () => {
+          console.log('Organizations changed, refreshing analytics...');
+          loadPlatformStats();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'subscriptions' },
+        () => {
+          console.log('Subscriptions changed, refreshing analytics...');
+          loadPlatformStats();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'organization_members' },
+        () => {
+          console.log('Members changed, refreshing analytics...');
+          loadPlatformStats();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadPlatformStats]);
+
+  // Auto-refresh every 60 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadPlatformStats();
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [loadPlatformStats]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-NG', {

@@ -8,7 +8,7 @@
 import { GeminiRequest, GeminiResponse } from '@/types/ai';
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
 export class GeminiService {
   private apiKey: string;
@@ -24,10 +24,12 @@ export class GeminiService {
    */
   async generateContent(request: GeminiRequest): Promise<GeminiResponse> {
     if (!this.apiKey) {
+      console.error('Gemini API key not configured. Please set VITE_GEMINI_API_KEY in .env.local');
       throw new Error('Gemini API key not configured');
     }
 
     try {
+      console.log('Gemini API: Making request...');
       const response = await fetch(`${GEMINI_API_URL}?key=${this.apiKey}`, {
         method: 'POST',
         headers: {
@@ -48,11 +50,14 @@ export class GeminiService {
 
       if (!response.ok) {
         const error = await response.json();
+        console.error('Gemini API error response:', error);
         throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`);
       }
 
       const data = await response.json();
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      
+      console.log('Gemini API: Response received, length:', text.length);
 
       return {
         text,

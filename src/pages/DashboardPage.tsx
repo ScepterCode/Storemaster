@@ -12,6 +12,7 @@ import { useTransactions } from '@/hooks/useTransactions';
 import { useProducts } from '@/hooks/useProducts';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useOrganization } from '@/contexts/OrganizationContext';
+import { useTrialNotification } from '@/hooks/useTrialNotification';
 import AnalyticsPreview from '@/components/dashboard/AnalyticsPreview';
 
 const DashboardPage = () => {
@@ -19,6 +20,10 @@ const DashboardPage = () => {
   const { products } = useProducts();
   const { invoices } = useInvoices();
   const { organization } = useOrganization();
+  
+  // Show trial expiration notification when user visits dashboard
+  useTrialNotification({ showWhenDaysRemaining: 14 });
+  
   const [stats, setStats] = useState<DashboardStats>({
     totalRevenue: 0,
     totalExpenses: 0,

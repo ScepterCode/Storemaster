@@ -5,9 +5,10 @@
  * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { adminService } from '@/services/adminService';
 import { AuditLog } from '@/types/admin';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,8 +57,45 @@ const AuditLogsPage = () => {
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
 
   // Load audit logs
+  const loadAuditLogs = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await adminService.getAuditLogs({ limit: 500 });
+      setAuditLogs(data);
+    } catch (error) {
+      console.error('Error loading audit logs:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load audit logs',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadAuditLogs();
+  }, [loadAuditLogs]);
+
+  // Set up real-time subscription for audit logs
+  useEffect(() => {
+    const channel = supabase
+      .channel('audit-logs-changes')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'audit_logs' },
+        (payload) => {
+          console.log('New audit log:', payload);
+          // Add new log to the beginning of the list
+          setAuditLogs(prev => [payload.new as AuditLog, ...prev]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Filter audit logs
@@ -88,23 +126,6 @@ const AuditLogsPage = () => {
 
     setFilteredLogs(filtered);
   }, [auditLogs, searchQuery, actionFilter, targetTypeFilter]);
-
-  const loadAuditLogs = async () => {
-    try {
-      setLoading(true);
-      const data = await adminService.getAuditLogs({ limit: 500 });
-      setAuditLogs(data);
-    } catch (error) {
-      console.error('Error loading audit logs:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load audit logs',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const openDetailsDialog = (log: AuditLog) => {
     setSelectedLog(log);

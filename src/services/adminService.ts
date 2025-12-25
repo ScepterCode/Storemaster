@@ -116,17 +116,18 @@ export const adminService = {
   async getOrganizationMembers(organizationId: string): Promise<OrganizationMember[]> {
     const { data, error } = await supabase
       .from('organization_members')
-      .select(`
-        *,
-        user:user_id (
-          email
-        )
-      `)
+      .select('*')
       .eq('organization_id', organizationId)
       .order('joined_at', { ascending: false });
 
     if (error) throw error;
-    return data as any;
+
+    // For now, return members without user email data to avoid join issues
+    // TODO: Implement proper user data fetching via Edge Function or RPC
+    return (data || []).map(member => ({
+      ...member,
+      user: { email: `user-${member.user_id.slice(0, 8)}` } // Placeholder
+    })) as OrganizationMember[];
   },
 
   async addOrganizationMember(

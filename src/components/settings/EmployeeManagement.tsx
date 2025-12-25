@@ -1,85 +1,62 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { UserRole, Permission } from '@/hooks/usePermissions';
-import { UserPlus, Save } from 'lucide-react';
-import { NewEmployee } from '@/types/employee';
-import { useEmployeeCreation } from '@/hooks/useEmployeeCreation';
-import EmployeeForm from './EmployeeForm';
-import PermissionsSection from './PermissionsSection';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Info, Users, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const EmployeeManagement = () => {
-  const [newEmployee, setNewEmployee] = useState<NewEmployee>({
-    email: '',
-    password: '',
-    role: 'staff' as UserRole,
-  });
-  
-  // Initialize with proper type - all permissions set to false by default
-  const initialPermissions: Record<Permission, boolean> = {
-    dashboard_view: false,
-    cash_desk_access: false,
-    cash_desk_edit: false,
-    transactions_view: false,
-    transactions_edit: false,
-    inventory_view: false,
-    inventory_edit: false,
-    reports_view: false,
-    reports_edit: false,
-    settings_view: false,
-    settings_edit: false,
-    user_management: false,
-    admin_access: false,
-  };
-  
-  const [customPermissions, setCustomPermissions] = useState<Record<Permission, boolean>>(initialPermissions);
-  const { createEmployee, isCreating } = useEmployeeCreation();
+  const navigate = useNavigate();
 
-  const handleCreateEmployee = async () => {
-    const success = await createEmployee(newEmployee, customPermissions);
-    
-    if (success) {
-      // Reset form
-      setNewEmployee({ email: '', password: '', role: 'staff' });
-      setCustomPermissions(initialPermissions);
-    }
-  };
-
-  const handlePermissionChange = (permission: Permission, granted: boolean) => {
-    setCustomPermissions(prev => ({
-      ...prev,
-      [permission]: granted,
-    }));
+  const handleGoToTeamMembers = () => {
+    navigate('/settings?tab=team');
   };
 
   return (
     <div className="space-y-6">
+      <Alert className="border-green-500 bg-green-50">
+        <Info className="h-4 w-4 text-green-600" />
+        <AlertDescription className="text-green-800">
+          <strong>Employee management is now available!</strong> Use the Team Members tab to add and manage employees.
+        </AlertDescription>
+      </Alert>
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
-            <UserPlus className="mr-2 h-5 w-5" />
-            Create Employee Account
+            <Users className="mr-2 h-5 w-5 text-green-600" />
+            Team Members Management
           </CardTitle>
           <CardDescription>
-            Add a new staff member and configure their access permissions
+            Add team members, assign roles, and manage permissions
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <EmployeeForm 
-            newEmployee={newEmployee}
-            onEmployeeChange={setNewEmployee}
-          />
-
-          <PermissionsSection
-            customPermissions={customPermissions}
-            onPermissionChange={handlePermissionChange}
-          />
-
-          <div className="flex justify-end pt-4">
-            <Button onClick={handleCreateEmployee} disabled={isCreating}>
-              <Save className="mr-2 h-4 w-4" />
-              {isCreating ? 'Creating...' : 'Create Employee'}
+        <CardContent className="space-y-4">
+          <div className="space-y-3 text-sm">
+            <div className="flex items-start space-x-2">
+              <span className="font-semibold text-green-600 min-w-[24px]">✓</span>
+              <p>Add team members by email and role</p>
+            </div>
+            <div className="flex items-start space-x-2">
+              <span className="font-semibold text-green-600 min-w-[24px]">✓</span>
+              <p>Manage existing team member roles and permissions</p>
+            </div>
+            <div className="flex items-start space-x-2">
+              <span className="font-semibold text-green-600 min-w-[24px]">✓</span>
+              <p>View team member activity and status</p>
+            </div>
+            <div className="flex items-start space-x-2">
+              <span className="font-semibold text-green-600 min-w-[24px]">✓</span>
+              <p>Set employee roles: Staff, Manager, or Owner</p>
+            </div>
+          </div>
+          
+          <div className="pt-4">
+            <Button onClick={handleGoToTeamMembers} className="w-full">
+              <Users className="mr-2 h-4 w-4" />
+              Manage Team Members
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </div>
         </CardContent>

@@ -91,7 +91,7 @@ export interface BarcodeProduct {
   id: string;
   name: string;
   sku: string;
-  barcode?: string;
+  barcode: string; // Required for barcode scanning
   price: number;
   quantity: number;
   category?: string;

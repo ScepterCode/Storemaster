@@ -12,15 +12,24 @@ import {
   PackageIcon,
   Users,
   TrendingUp,
+  MessageSquare,
+  Clock,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import { usePermissions, Permission } from '@/hooks/usePermissions'; // Import Permission type
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { Shield } from 'lucide-react';
+import { 
+  isWithinFreeTierTrial, 
+  getTrialDaysRemaining,
+  isTrialFeature 
+} from '@/config/subscriptionPlans';
 
 interface SidebarNavigationItem {
   label: string;
@@ -28,6 +37,7 @@ interface SidebarNavigationItem {
   href: string;
   active?: boolean;
   permission?: Permission; // Use the imported Permission type
+  trialFeature?: string; // Feature name for trial badge
 }
 
 interface SidebarProps {
@@ -38,8 +48,19 @@ interface SidebarProps {
 const Sidebar = ({ isSidebarOpen, toggleSidebar }: SidebarProps) => {
   const location = useLocation();
   const { user, signOut } = useAuth();
+  const { organization } = useOrganization();
   const { hasPermission, loading } = usePermissions();
   const { isAdmin } = useAdminAuth();
+
+  // Calculate trial status
+  const trialStatus = useMemo(() => {
+    if (!organization || organization.subscription_tier !== 'free') {
+      return { isInTrial: false, daysRemaining: 0 };
+    }
+    const isInTrial = isWithinFreeTierTrial(organization.created_at);
+    const daysRemaining = getTrialDaysRemaining(organization.created_at);
+    return { isInTrial, daysRemaining };
+  }, [organization]);
 
   const isActive = (path: string) => {
     // Special case for dashboard/root path
@@ -98,14 +119,31 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }: SidebarProps) => {
       icon: <LineChartIcon className="h-4 w-4" />,
       href: '/reports',
       active: isActive('/reports'),
-      permission: 'reports_view'
+      permission: 'reports_view',
+      trialFeature: 'advanced_reports'
     },
     {
       label: 'Stock Predictions',
       icon: <TrendingUp className="h-4 w-4" />,
       href: '/stock-predictions',
       active: isActive('/stock-predictions'),
-      permission: 'reports_view'
+      permission: 'reports_view',
+      trialFeature: 'stock_predictions'
+    },
+    {
+      label: 'Quist',
+      icon: <MessageSquare className="h-4 w-4" />,
+      href: '/quist',
+      active: isActive('/quist'),
+      permission: 'reports_view',
+      trialFeature: 'quist'
+    },
+    {
+      label: 'Team Members',
+      icon: <Users className="h-4 w-4" />,
+      href: '/team-members',
+      active: isActive('/team-members'),
+      permission: 'user_management'
     },
     {
       label: 'Settings',
@@ -170,23 +208,59 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }: SidebarProps) => {
 
       <ScrollArea className="flex-1 overflow-hidden">
         <nav className="flex flex-col gap-1 px-2 py-4">
-          {visibleItems.map((item) => (
-            <Button
-              key={item.href}
-              variant={item.active ? 'default' : 'ghost'}
-              asChild
-              size={isSidebarOpen ? 'default' : 'icon'}
-              className={cn(
-                'justify-start',
-                isSidebarOpen ? 'h-10 w-full px-4' : 'h-10 w-10'
-              )}
-            >
-              <Link to={item.href}>
-                {item.icon}
-                {isSidebarOpen && <span className="ml-2">{item.label}</span>}
-              </Link>
-            </Button>
-          ))}
+          {visibleItems.map((item) => {
+            // Check if this item has a trial feature and user is on free tier in trial
+            const showTrialBadge = item.trialFeature && 
+              organization?.subscription_tier === 'free' && 
+              trialStatus.isInTrial &&
+              isTrialFeature(item.trialFeature);
+            
+            // Check if trial expired for this feature
+            const trialExpired = item.trialFeature && 
+              organization?.subscription_tier === 'free' && 
+              !trialStatus.isInTrial &&
+              isTrialFeature(item.trialFeature);
+
+            return (
+              <Button
+                key={item.href}
+                variant={item.active ? 'default' : 'ghost'}
+                asChild
+                size={isSidebarOpen ? 'default' : 'icon'}
+                className={cn(
+                  'justify-start relative',
+                  isSidebarOpen ? 'h-10 w-full px-4' : 'h-10 w-10',
+                  trialExpired && 'opacity-60'
+                )}
+              >
+                <Link to={item.href}>
+                  {item.icon}
+                  {isSidebarOpen && (
+                    <span className="ml-2 flex items-center gap-2">
+                      {item.label}
+                      {showTrialBadge && (
+                        <Badge 
+                          variant="outline" 
+                          className="text-[10px] px-1 py-0 h-4 bg-amber-50 text-amber-700 border-amber-200"
+                        >
+                          <Clock className="h-2.5 w-2.5 mr-0.5" />
+                          Trial
+                        </Badge>
+                      )}
+                      {trialExpired && (
+                        <Badge 
+                          variant="outline" 
+                          className="text-[10px] px-1 py-0 h-4 bg-gray-50 text-gray-500 border-gray-200"
+                        >
+                          Pro
+                        </Badge>
+                      )}
+                    </span>
+                  )}
+                </Link>
+              </Button>
+            );
+          })}
         </nav>
       </ScrollArea>
 

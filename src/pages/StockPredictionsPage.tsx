@@ -49,7 +49,7 @@ const StockPredictionsPage: React.FC = () => {
 
   return (
     <AppLayout>
-      <FeatureGuard feature="advanced_reports">
+      <FeatureGuard feature="stock_predictions">
         <div className="space-y-6 animate-fade-in">
           {/* Header */}
           <div className="flex items-center justify-between">

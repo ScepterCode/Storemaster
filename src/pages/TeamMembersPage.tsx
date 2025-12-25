@@ -6,12 +6,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useOrganization } from '@/contexts/OrganizationContext';
-import { adminService } from '@/services/adminService';
-import { invitationService } from '@/services/invitationService';
-import { OrganizationMember, OrganizationInvitation, OrganizationRole } from '@/types/admin';
+import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/layout/AppLayout';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -49,15 +46,22 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  RefreshCw
+  RefreshCw,
+  Shield
 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
+import { UserRole } from '@/hooks/usePermissions';
+import { supabase } from '@/integrations/supabase/client';
 
-export default function TeamMembersPage() {
+interface TeamMembersProps {
+  embedded?: boolean;
+}
+
+export default function TeamMembersPage({ embedded = false }: TeamMembersProps) {
   const { organization, canManageUsers } = useOrganization();
   
   const [members, setMembers] = useState<OrganizationMember[]>([]);
-  const [invitations, setInvitations] = useState<OrganizationInvitation[]>([]);
+  const [invitations, setInvitations] = useState<TeamInvitation[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Dialog states
@@ -65,6 +69,12 @@ export default function TeamMembersPage() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<OrganizationRole>('member');
   const [submitting, setSubmitting] = useState(false);
+  
+  // Employee role management states
+  const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<OrganizationMember | null>(null);
+  const [newEmployeeRole, setNewEmployeeRole] = useState<UserRole>('staff');
+  const [updatingRole, setUpdatingRole] = useState(false);
 
   useEffect(() => {
     if (organization) {
@@ -77,12 +87,29 @@ export default function TeamMembersPage() {
 
     try {
       setLoading(true);
-      const [membersData, invitationsData] = await Promise.all([
-        adminService.getOrganizationMembers(organization.id),
-        invitationService.getOrganizationInvitations(organization.id),
-      ]);
-      setMembers(membersData);
+      
+      // Load invitations (simplified for now)
+      const invitationsData = await teamInvitationService.getOrganizationInvitations(organization?.id || 'default-org');
+      
+      // Load members from user_roles table
+      const { data: usersWithRoles } = await supabase
+        .from('user_roles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      const membersList = (usersWithRoles || []).map((userRole, index) => ({
+        id: userRole.id || `member-${index}`,
+        user_id: userRole.user_id,
+        organization_id: organization?.id || 'default-org',
+        role: userRole.role as any,
+        is_active: true,
+        joined_at: userRole.created_at,
+        user: { email: `user-${userRole.user_id.slice(0, 8)}@example.com` }
+      }));
+      
+      setMembers(membersList as any);
       setInvitations(invitationsData);
+      
     } catch (error) {
       console.error('Error loading team data:', error);
       toast({
@@ -90,6 +117,8 @@ export default function TeamMembersPage() {
         description: 'Failed to load team members',
         variant: 'destructive',
       });
+      setMembers([]);
+      setInvitations([]);
     } finally {
       setLoading(false);
     }
@@ -100,21 +129,28 @@ export default function TeamMembersPage() {
 
     try {
       setSubmitting(true);
-      await invitationService.createInvitation(
-        organization.id,
+      
+      // Map organization role to team role
+      const teamRole = inviteRole === 'owner' ? 'owner' : inviteRole === 'admin' ? 'manager' : 'staff';
+      
+      await teamInvitationService.createInvitation(
+        organization?.id || 'default-org',
         inviteEmail,
-        inviteRole
+        teamRole
       );
+      
       toast({
-        title: 'Success',
-        description: `Invitation sent to ${inviteEmail}`,
+        title: 'Invitation Sent!',
+        description: `Team member invitation sent to ${inviteEmail}. They will receive an email with a registration link.`,
       });
+      
       setInviteDialogOpen(false);
       setInviteEmail('');
       setInviteRole('member');
       loadData();
+      
     } catch (error) {
-      console.error('Error inviting member:', error);
+      console.error('Error sending invitation:', error);
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to send invitation',
@@ -125,13 +161,19 @@ export default function TeamMembersPage() {
     }
   };
 
-  const handleRemoveMember = async (member: OrganizationMember) => {
+  const handleRemoveMember = async (member: any) => {
     if (!confirm(`Are you sure you want to remove ${member.user?.email || 'this member'}?`)) {
       return;
     }
 
     try {
-      await adminService.removeOrganizationMember(member.id);
+      const { error } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', member.user_id);
+
+      if (error) throw error;
+
       toast({
         title: 'Success',
         description: 'Member removed successfully',
@@ -147,9 +189,9 @@ export default function TeamMembersPage() {
     }
   };
 
-  const handleCancelInvitation = async (invitation: OrganizationInvitation) => {
+  const handleCancelInvitation = async (invitation: TeamInvitation) => {
     try {
-      await invitationService.cancelInvitation(invitation.id);
+      await teamInvitationService.cancelInvitation(invitation.id);
       toast({
         title: 'Success',
         description: 'Invitation cancelled',
@@ -165,9 +207,9 @@ export default function TeamMembersPage() {
     }
   };
 
-  const handleResendInvitation = async (invitation: OrganizationInvitation) => {
+  const handleResendInvitation = async (invitation: TeamInvitation) => {
     try {
-      await invitationService.resendInvitation(invitation.id);
+      await teamInvitationService.resendInvitation(invitation.id);
       toast({
         title: 'Success',
         description: 'Invitation resent',
@@ -180,6 +222,48 @@ export default function TeamMembersPage() {
         description: 'Failed to resend invitation',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleOpenRoleDialog = (member: any) => {
+    setSelectedMember(member);
+    setNewEmployeeRole(member.role || 'staff');
+    setRoleDialogOpen(true);
+  };
+
+  const handleUpdateEmployeeRole = async () => {
+    if (!selectedMember) return;
+
+    try {
+      setUpdatingRole(true);
+      
+      // Update user role in the database
+      const { error } = await supabase
+        .from('user_roles')
+        .upsert({
+          user_id: selectedMember.user_id,
+          role: newEmployeeRole
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: `Employee role updated to ${newEmployeeRole}`,
+      });
+      
+      setRoleDialogOpen(false);
+      setSelectedMember(null);
+      loadData();
+    } catch (error) {
+      console.error('Error updating employee role:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update employee role',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingRole(false);
     }
   };
 
@@ -216,31 +300,34 @@ export default function TeamMembersPage() {
   };
 
   if (!organization) {
-    return (
+    const content = (
       <div className="flex items-center justify-center h-96">
         <p className="text-muted-foreground">No organization selected</p>
       </div>
     );
+    
+    return embedded ? content : <AppLayout>{content}</AppLayout>;
   }
 
-  return (
-    <AppLayout>
-      <div className="space-y-6">
+  const content = (
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Team Members</h2>
           <p className="text-muted-foreground">
-            Manage your organization's team members and invitations
+            Manage your team members and their roles
           </p>
         </div>
         {canManageUsers && (
           <Button onClick={() => setInviteDialogOpen(true)}>
             <UserPlus className="mr-2 h-4 w-4" />
-            Invite Member
+            Add Team Member
           </Button>
         )}
       </div>
+
+
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -252,35 +339,35 @@ export default function TeamMembersPage() {
           <CardContent>
             <div className="text-2xl font-bold">{members.length}</div>
             <p className="text-xs text-muted-foreground">
-              Active team members
+              Team members with roles
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Invitations</CardTitle>
-            <Mail className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Active Roles</CardTitle>
+            <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {invitations.filter(i => i.status === 'pending').length}
+              {new Set(members.map(m => m.role)).size}
             </div>
             <p className="text-xs text-muted-foreground">
-              Awaiting acceptance
+              Different role types
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Available Seats</CardTitle>
+            <CardTitle className="text-sm font-medium">Management</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {organization.max_users - members.length}
+              {members.filter(m => ['owner', 'manager'].includes(m.role)).length}
             </div>
             <p className="text-xs text-muted-foreground">
-              Out of {organization.max_users} total
+              Managers and owners
             </p>
           </CardContent>
         </Card>
@@ -338,15 +425,28 @@ export default function TeamMembersPage() {
                         </TableCell>
                         {canManageUsers && (
                           <TableCell className="text-right">
-                            {member.role !== 'owner' && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleRemoveMember(member)}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            )}
+                            <div className="flex justify-end gap-2">
+                              {member.role !== 'owner' && (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleOpenRoleDialog(member)}
+                                    title="Manage employee role"
+                                  >
+                                    <Shield className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleRemoveMember(member)}
+                                    title="Remove member"
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
                           </TableCell>
                         )}
                       </TableRow>
@@ -437,9 +537,9 @@ export default function TeamMembersPage() {
       <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Invite Team Member</DialogTitle>
+            <DialogTitle>Add Team Member</DialogTitle>
             <DialogDescription>
-              Send an invitation to join your organization
+              Create a role for a team member. Ask them to sign up with this email.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -463,15 +563,15 @@ export default function TeamMembersPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="member">Member</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="member">Staff</SelectItem>
+                  <SelectItem value="admin">Manager</SelectItem>
                   <SelectItem value="owner">Owner</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
                 {inviteRole === 'owner' && 'Full access to all features and settings'}
                 {inviteRole === 'admin' && 'Can manage team members and settings'}
-                {inviteRole === 'member' && 'Standard access to organization features'}
+                {inviteRole === 'member' && 'Standard access to features'}
               </p>
             </div>
           </div>
@@ -491,12 +591,68 @@ export default function TeamMembersPage() {
               disabled={submitting || !inviteEmail}
             >
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Send Invitation
+              Add Team Member
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      </div>
-    </AppLayout>
+
+      {/* Employee Role Management Dialog */}
+      <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Manage Employee Role</DialogTitle>
+            <DialogDescription>
+              Set the employee role for {selectedMember?.user?.email}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="employee-role">Employee Role</Label>
+              <Select
+                value={newEmployeeRole}
+                onValueChange={(value: UserRole) => setNewEmployeeRole(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="staff">Staff</SelectItem>
+                  <SelectItem value="cashier">Cashier</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="owner">Owner</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p><strong>Staff:</strong> Basic access to dashboard, cash desk, transactions, inventory, and reports</p>
+                <p><strong>Cashier:</strong> Same as staff with enhanced cash desk permissions</p>
+                <p><strong>Manager:</strong> Can edit transactions, inventory, and reports</p>
+                <p><strong>Owner:</strong> Full access including settings and user management</p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRoleDialogOpen(false);
+                setSelectedMember(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUpdateEmployeeRole} 
+              disabled={updatingRole}
+            >
+              {updatingRole && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Update Role
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
+
+  return embedded ? content : <AppLayout>{content}</AppLayout>;
 }

@@ -21,6 +21,8 @@ const GeneralSettings = () => {
   const [autoBackup, setAutoBackup] = useState(true);
   const [lowStockAlerts, setLowStockAlerts] = useState(true);
   const [emailReports, setEmailReports] = useState(false);
+  const [enableBarcodeScanning, setEnableBarcodeScanning] = useState(true);
+  const [autoScanMode, setAutoScanMode] = useState(false);
 
   const handleSaveGeneral = () => {
     // Here you would typically save to Supabase or local storage
@@ -171,6 +173,39 @@ const GeneralSettings = () => {
               id="email-reports"
               checked={emailReports}
               onCheckedChange={setEmailReports}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="barcode-scanning">Barcode Scanner</Label>
+              <p className="text-sm text-muted-foreground">
+                Enable camera-based barcode scanning in cashdesk
+              </p>
+            </div>
+            <Switch
+              id="barcode-scanning"
+              checked={enableBarcodeScanning}
+              onCheckedChange={setEnableBarcodeScanning}
+            />
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="auto-scan-mode">Auto-Scan Mode</Label>
+              <p className="text-sm text-muted-foreground">
+                Automatically open scanner when cashdesk loads
+              </p>
+            </div>
+            <Switch
+              id="auto-scan-mode"
+              checked={autoScanMode}
+              onCheckedChange={setAutoScanMode}
+              disabled={!enableBarcodeScanning}
             />
           </div>
         </CardContent>

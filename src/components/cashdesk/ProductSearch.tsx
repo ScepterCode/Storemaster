@@ -4,11 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Search, BarChart3, Plus } from 'lucide-react';
+import { Search, Camera, Plus } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
 import { Product } from '@/types'; // Import Product type
 import { BarcodeProduct, SaleItem } from '@/types/cashdesk';
 import { useToast } from '@/components/ui/use-toast';
+import BarcodeScanner from './BarcodeScanner';
 
 interface ProductSearchProps {
   onAddItem: (item: Omit<SaleItem, 'id'>) => void;
@@ -30,14 +31,51 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ onAddItem }) => {
   const handleBarcodeInput = (value: string) => {
     // Check if input looks like a barcode (typically numeric and longer)
     if (/^\d{8,}$/.test(value)) {
-      const product = products.find(p => p.id === value);
+      // First try to find by barcode field
+      let product = products.find(p => p.barcode === value);
+      
+      // Fallback to ID if no barcode match
+      if (!product) {
+        product = products.find(p => p.id === value);
+      }
+      
       if (product) {
         handleAddProduct(product);
+        setSearchTerm('');
+        return;
+      } else {
+        toast({
+          title: "Product Not Found",
+          description: `No product found with barcode: ${value}`,
+          variant: "destructive",
+        });
         setSearchTerm('');
         return;
       }
     }
     setSearchTerm(value);
+  };
+
+  const handleBarcodeScanned = (barcode: string) => {
+    console.log('Barcode scanned:', barcode);
+    
+    // Find product by barcode
+    let product = products.find(p => p.barcode === barcode);
+    
+    // Fallback to ID match
+    if (!product) {
+      product = products.find(p => p.id === barcode);
+    }
+    
+    if (product) {
+      handleAddProduct(product);
+    } else {
+      toast({
+        title: "Product Not Found",
+        description: `No product found with barcode: ${barcode}`,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleAddProduct = (product: Product) => { // Use Product type
@@ -111,18 +149,17 @@ const ProductSearch: React.FC<ProductSearchProps> = ({ onAddItem }) => {
             onClick={() => setIsScanning(!isScanning)}
             className="flex items-center gap-2"
           >
-            <BarChart3 className="h-4 w-4" />
+            <Camera className="h-4 w-4" />
             {isScanning ? 'Stop Scan' : 'Scan'}
           </Button>
         </div>
 
         {isScanning && (
-          <div className="p-4 border-2 border-dashed border-muted-foreground rounded-lg text-center">
-            <BarChart3 className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              Barcode scanner active. Use input field or external scanner.
-            </p>
-          </div>
+          <BarcodeScanner
+            isActive={isScanning}
+            onScan={handleBarcodeScanned}
+            onClose={() => setIsScanning(false)}
+          />
         )}
 
         <div className="max-h-96 overflow-y-auto space-y-2">

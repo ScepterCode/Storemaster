@@ -187,6 +187,7 @@ export interface SubscriptionPlan {
   price_monthly: number;
   price_yearly: number;
   currency: string;
+  description?: string;
   features: {
     max_users: number;
     max_products: number;

@@ -6,7 +6,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import UserManagement from '@/components/settings/UserManagement';
 import NotificationSettings from '@/components/settings/NotificationSettings';
 import GeneralSettings from '@/components/settings/GeneralSettings';
-import EmployeeManagement from '@/components/settings/EmployeeManagement';
+import SimpleTeamMembersPage from '@/pages/SimpleTeamMembersPage';
 import { usePermissions } from '@/hooks/usePermissions';
 
 const SettingsPage = () => {
@@ -43,7 +43,7 @@ const SettingsPage = () => {
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             {canManageEmployees && (
               <>
-                <TabsTrigger value="employees">Add Employee</TabsTrigger>
+                <TabsTrigger value="team">Team Members</TabsTrigger>
                 <TabsTrigger value="users">User Management</TabsTrigger>
               </>
             )}
@@ -59,8 +59,8 @@ const SettingsPage = () => {
 
           {canManageEmployees && (
             <>
-              <TabsContent value="employees" className="space-y-4">
-                <EmployeeManagement />
+              <TabsContent value="team" className="space-y-4">
+                <SimpleTeamMembersPage embedded={true} />
               </TabsContent>
               
               <TabsContent value="users" className="space-y-4">
