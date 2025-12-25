@@ -1166,6 +1166,79 @@ function buildResponseComponents(intent: QuistIntent, data: unknown): {
 }
 
 // ============================================================================
+// AI Fallback for Unknown Intents
+// ============================================================================
+
+/**
+ * Uses AI to answer questions that don't match predefined intents
+ * Fetches relevant data and lets Gemini generate a helpful response
+ */
+async function answerWithAI(
+  query: string,
+  organizationId: string,
+  context?: QuistConversationContext
+): Promise<string | null> {
+  try {
+    // Fetch some basic data that might be relevant
+    const [topProducts, todayRevenue, lowStock] = await Promise.allSettled([
+      getTopSellingProducts(organizationId, 'this_month', 5),
+      getTodayRevenue(organizationId),
+      getLowStockProducts(organizationId),
+    ]);
+
+    // Build context from available data
+    let dataContext = 'Available business data:\n';
+    
+    if (topProducts.status === 'fulfilled' && topProducts.value.length > 0) {
+      dataContext += `\nTop Products: ${topProducts.value.map(p => 
+        `${p.productName} (${p.totalQuantity} sold, ${p.totalRevenue.toFixed(2)} revenue)`
+      ).join(', ')}`;
+    }
+    
+    if (todayRevenue.status === 'fulfilled') {
+      dataContext += `\nToday's Revenue: ${todayRevenue.value.totalRevenue.toFixed(2)} from ${todayRevenue.value.transactionCount} transactions`;
+    }
+    
+    if (lowStock.status === 'fulfilled' && lowStock.value.length > 0) {
+      dataContext += `\nLow Stock Items: ${lowStock.value.map(p => 
+        `${p.name} (${p.quantity} left)`
+      ).join(', ')}`;
+    }
+
+    // Create prompt for AI
+    const prompt = `You are Quist, a friendly business intelligence assistant for a retail inventory management system.
+A user asked: "${query}"
+
+${dataContext}
+
+Based on the available data above, provide a helpful, conversational answer to their question.
+If the data doesn't contain what they're asking for, politely explain what data you do have access to.
+Keep your response concise (2-3 sentences) and friendly.
+Use plain text, no markdown formatting.
+
+Response:`;
+
+    const response = await geminiService.generateContent({
+      prompt,
+      temperature: 0.7,
+      max_tokens: 300,
+    });
+
+    const cleanedResponse = cleanResponseText(response.text);
+    
+    // Validate response
+    if (!cleanedResponse || cleanedResponse.length < 20) {
+      return null;
+    }
+
+    return cleanedResponse;
+  } catch (error) {
+    console.error('AI fallback error:', error);
+    return null;
+  }
+}
+
+// ============================================================================
 // Main Orchestrator
 // ============================================================================
 
@@ -1183,9 +1256,35 @@ export async function processQuery(
   // Step 1: Classify intent
   const classification = await classifyIntent(query, context);
 
-  // Step 1.5: Handle unknown intents gracefully with fallback response
+  // Step 1.5: Handle unknown intents - try to answer with AI before showing suggestions
   if (classification.intent === 'unknown' || classification.confidence < 0.3) {
     console.log(`Unknown intent detected for query: "${query}" (confidence: ${classification.confidence})`);
+    
+    // Try to answer the question using AI with available data context
+    try {
+      const aiResponse = await answerWithAI(query, organizationId, context);
+      if (aiResponse) {
+        return {
+          type: 'text',
+          text: aiResponse,
+          actions: [
+            { label: 'What are my best selling products?', type: 'query', payload: 'What are my best selling products?' },
+            { label: 'How much revenue did I make today?', type: 'query', payload: 'How much revenue did I make today?' },
+          ],
+          metadata: {
+            intent: 'unknown',
+            params: classification.params,
+            processingTimeMs: Date.now() - startTime,
+            dataTimestamp: new Date().toISOString(),
+            cached: false,
+          },
+        };
+      }
+    } catch (error) {
+      console.error('AI fallback failed:', error);
+    }
+    
+    // If AI fails, show suggestions
     return handleUnknownIntentWithContext(query, context, Date.now() - startTime);
   }
 
