@@ -1,33 +1,112 @@
 /**
- * OpenAI Service
+ * OpenAI Service (Now using Gemini)
  * 
- * Wrapper for OpenAI API integration
+ * Wrapper for AI API integration
  * Handles all AI-powered analysis and predictions
+ * Currently configured to use Google Gemini API
  */
 
 import { GeminiRequest, GeminiResponse } from '@/types/ai';
 
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 export class OpenAIService {
   private apiKey: string;
   private model: string;
+  private useGemini: boolean;
 
-  constructor(apiKey?: string, model: string = 'gpt-3.5-turbo') {
-    this.apiKey = apiKey || OPENAI_API_KEY;
+  constructor(apiKey?: string, model: string = 'gemini-pro') {
+    // Prefer Gemini if available, fallback to OpenAI
+    this.useGemini = !!GEMINI_API_KEY;
+    this.apiKey = apiKey || (this.useGemini ? GEMINI_API_KEY : OPENAI_API_KEY);
     this.model = model;
   }
 
   /**
-   * Generate content using OpenAI API
+   * Generate content using Gemini or OpenAI API
    */
   async generateContent(request: GeminiRequest): Promise<GeminiResponse> {
     if (!this.apiKey) {
-      console.error('OpenAI API key not configured. Please set VITE_OPENAI_API_KEY in .env.local');
-      throw new Error('OpenAI API key not configured');
+      console.error('AI API key not configured. Please set VITE_GEMINI_API_KEY or VITE_OPENAI_API_KEY in .env.local');
+      throw new Error('AI API key not configured');
     }
 
+    if (this.useGemini) {
+      return this.generateWithGemini(request);
+    } else {
+      return this.generateWithOpenAI(request);
+    }
+  }
+
+  /**
+   * Generate content using Google Gemini API
+   */
+  private async generateWithGemini(request: GeminiRequest): Promise<GeminiResponse> {
+    try {
+      console.log('Gemini API: Making request...');
+      
+      // Build the prompt with context and system instruction
+      let fullPrompt = '';
+      if (request.system_instruction) {
+        fullPrompt += `${request.system_instruction}\n\n`;
+      }
+      if (request.context) {
+        fullPrompt += `Context:\n${request.context}\n\n`;
+      }
+      fullPrompt += request.prompt;
+
+      const url = `${GEMINI_API_URL}/${this.model}:generateContent?key=${this.apiKey}`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: fullPrompt
+            }]
+          }],
+          generationConfig: {
+            temperature: request.temperature || 0.7,
+            maxOutputTokens: request.max_tokens || 2048,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Gemini API error response:', error);
+        throw new Error(`Gemini API error: ${error.error?.message || 'Unknown error'}`);
+      }
+
+      const data = await response.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      
+      console.log('Gemini API: Response received, length:', text.length);
+
+      return {
+        text,
+        usage: {
+          prompt_tokens: data.usageMetadata?.promptTokenCount || 0,
+          completion_tokens: data.usageMetadata?.candidatesTokenCount || 0,
+          total_tokens: data.usageMetadata?.totalTokenCount || 0,
+        },
+        finish_reason: data.candidates?.[0]?.finishReason,
+      };
+    } catch (error) {
+      console.error('Gemini API error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate content using OpenAI API (fallback)
+   */
+  private async generateWithOpenAI(request: GeminiRequest): Promise<GeminiResponse> {
     try {
       console.log('OpenAI API: Making request...');
       
@@ -53,6 +132,7 @@ export class OpenAIService {
         content: userContent
       });
 
+      const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
       const response = await fetch(OPENAI_API_URL, {
         method: 'POST',
         headers: {
@@ -60,7 +140,7 @@ export class OpenAIService {
           'Authorization': `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify({
-          model: this.model,
+          model: 'gpt-3.5-turbo',
           messages,
           temperature: request.temperature || 0.7,
           max_tokens: request.max_tokens || 2048,
