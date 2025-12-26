@@ -16,8 +16,8 @@ const GeneralSettings = () => {
   const [businessEmail, setBusinessEmail] = useState(user?.email || '');
   const [businessPhone, setBusinessPhone] = useState('');
   const [businessAddress, setBusinessAddress] = useState('');
-  const [currency, setCurrency] = useState('USD');
-  const [timezone, setTimezone] = useState('UTC');
+  const [currency, setCurrency] = useState('NGN');
+  const [timezone, setTimezone] = useState('Africa/Lagos');
   const [autoBackup, setAutoBackup] = useState(true);
   const [lowStockAlerts, setLowStockAlerts] = useState(true);
   const [emailReports, setEmailReports] = useState(false);
@@ -83,10 +83,14 @@ const GeneralSettings = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="USD">USD ($)</SelectItem>
-                  <SelectItem value="EUR">EUR (€)</SelectItem>
-                  <SelectItem value="GBP">GBP (£)</SelectItem>
-                  <SelectItem value="JPY">JPY (¥)</SelectItem>
+                  <SelectItem value="NGN">NGN (₦) - Nigerian Naira</SelectItem>
+                  <SelectItem value="USD">USD ($) - US Dollar</SelectItem>
+                  <SelectItem value="EUR">EUR (€) - Euro</SelectItem>
+                  <SelectItem value="GBP">GBP (£) - British Pound</SelectItem>
+                  <SelectItem value="JPY">JPY (¥) - Japanese Yen</SelectItem>
+                  <SelectItem value="GHS">GHS (₵) - Ghanaian Cedi</SelectItem>
+                  <SelectItem value="ZAR">ZAR (R) - South African Rand</SelectItem>
+                  <SelectItem value="KES">KES (KSh) - Kenyan Shilling</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -108,14 +112,18 @@ const GeneralSettings = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="Africa/Lagos">Lagos (WAT)</SelectItem>
+                <SelectItem value="Africa/Johannesburg">Johannesburg (SAST)</SelectItem>
+                <SelectItem value="Africa/Nairobi">Nairobi (EAT)</SelectItem>
+                <SelectItem value="Africa/Cairo">Cairo (EET)</SelectItem>
                 <SelectItem value="UTC">UTC</SelectItem>
-                <SelectItem value="America/New_York">Eastern Time</SelectItem>
-                <SelectItem value="America/Chicago">Central Time</SelectItem>
-                <SelectItem value="America/Denver">Mountain Time</SelectItem>
-                <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
-                <SelectItem value="Europe/London">London</SelectItem>
-                <SelectItem value="Europe/Paris">Paris</SelectItem>
-                <SelectItem value="Asia/Tokyo">Tokyo</SelectItem>
+                <SelectItem value="America/New_York">Eastern Time (ET)</SelectItem>
+                <SelectItem value="America/Chicago">Central Time (CT)</SelectItem>
+                <SelectItem value="America/Denver">Mountain Time (MT)</SelectItem>
+                <SelectItem value="America/Los_Angeles">Pacific Time (PT)</SelectItem>
+                <SelectItem value="Europe/London">London (GMT)</SelectItem>
+                <SelectItem value="Europe/Paris">Paris (CET)</SelectItem>
+                <SelectItem value="Asia/Tokyo">Tokyo (JST)</SelectItem>
               </SelectContent>
             </Select>
           </div>

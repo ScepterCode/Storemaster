@@ -14,6 +14,7 @@ import {
   TrendingUp,
   MessageSquare,
   Clock,
+  LogOut,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -289,7 +290,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }: SidebarProps) => {
             )}
             onClick={() => signOut()}
           >
-            <SettingsIcon className="h-4 w-4" />
+            <LogOut className="h-4 w-4" />
             {isSidebarOpen && <span className="ml-2">Logout</span>}
           </Button>
         </div>
