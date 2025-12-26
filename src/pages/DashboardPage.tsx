@@ -22,7 +22,7 @@ const DashboardPage = () => {
   const { organization } = useOrganization();
   
   // Show trial expiration notification when user visits dashboard
-  useTrialNotification({ showWhenDaysRemaining: 14 });
+  useTrialNotification();
   
   const [stats, setStats] = useState<DashboardStats>({
     totalRevenue: 0,
@@ -88,7 +88,10 @@ const DashboardPage = () => {
             <h1 className="text-2xl font-bold">Dashboard</h1>
             <p className="text-muted-foreground">Welcome back to your business overview</p>
           </div>
-          <Button className="bg-primary text-white hover:bg-primary/90">
+          <Button 
+            className="bg-primary text-white hover:bg-primary/90"
+            onClick={() => window.location.href = '/transactions'}
+          >
             <Plus className="mr-2 h-4 w-4" /> New Transaction
           </Button>
         </div>
@@ -173,7 +176,11 @@ const DashboardPage = () => {
             ) : (
               <div className="p-8 text-center">
                 <p className="text-muted-foreground">No transactions yet.</p>
-                <Button variant="outline" className="mt-4">
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => window.location.href = '/transactions'}
+                >
                   <Plus className="mr-2 h-4 w-4" /> Add Transaction
                 </Button>
               </div>
@@ -207,7 +214,11 @@ const DashboardPage = () => {
             ) : (
               <div className="p-8 text-center">
                 <p className="text-muted-foreground">No low stock items.</p>
-                <Button variant="outline" className="mt-4">
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => window.location.href = '/inventory'}
+                >
                   <Plus className="h-4 w-4 mr-2" /> Add Inventory
                 </Button>
               </div>

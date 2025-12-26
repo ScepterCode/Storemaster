@@ -5,6 +5,8 @@ import { Eye, RefreshCw, AlertCircle } from "lucide-react";
 import { useInventory } from "@/hooks/useInventory";
 import ProductsTab from "@/components/inventory/ProductsTab";
 import CategoriesTab from "@/components/inventory/CategoriesTab";
+import BatchManagement from "@/components/inventory/BatchManagement";
+import ExpiryDashboard from "@/components/inventory/ExpiryDashboard";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -79,9 +81,11 @@ const InventoryPage = () => {
         )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2 mb-6">
+          <TabsList className="grid w-full max-w-2xl grid-cols-4 mb-6">
             <TabsTrigger value="products">Products</TabsTrigger>
             <TabsTrigger value="categories">Categories</TabsTrigger>
+            <TabsTrigger value="batches">Batches (FEFO)</TabsTrigger>
+            <TabsTrigger value="expiry">Expiry</TabsTrigger>
           </TabsList>
 
           {loading ? (
@@ -119,6 +123,14 @@ const InventoryPage = () => {
                   handleUpdateCategory={handleUpdateCategory}
                   handleDeleteCategory={handleDeleteCategory}
                 />
+              </TabsContent>
+
+              <TabsContent value="batches" className="mt-0">
+                <BatchManagement />
+              </TabsContent>
+
+              <TabsContent value="expiry" className="mt-0">
+                <ExpiryDashboard />
               </TabsContent>
             </>
           )}
