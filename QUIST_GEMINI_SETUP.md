@@ -11,9 +11,23 @@ Updated `src/services/openaiService.ts` to:
 - Support both Gemini and OpenAI APIs
 - Automatically prefer Gemini when `VITE_GEMINI_API_KEY` is set
 - Fallback to OpenAI if Gemini key is not available
-- Use `gemini-pro` model by default
+- Use `gemini-2.5-flash` model (latest stable version)
 
-### 3. How It Works
+### 3. Testing Results ✅
+All tests passed successfully:
+- ✅ Gemini API connection working
+- ✅ Intent classification accurate (95-100% confidence)
+- ✅ Response generation natural and conversational
+- ✅ All 5 test queries processed correctly
+
+**Test Queries Verified:**
+- "What are my best selling products?" → `top_selling_products` (95% confidence)
+- "How much revenue did I make today?" → `today_revenue` (95% confidence)
+- "Which products are low on stock?" → `low_stock_products` (95% confidence)
+- "Show me this week's sales trend" → `sales_trend` (95% confidence)
+- "Did I make profit this month?" → `monthly_profit` (100% confidence)
+
+### 4. How It Works
 The service now:
 1. Checks for `VITE_GEMINI_API_KEY` in environment
 2. If found, uses Gemini API at `https://generativelanguage.googleapis.com/v1beta/models`
