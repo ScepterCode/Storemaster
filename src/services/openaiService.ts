@@ -17,7 +17,7 @@ export class OpenAIService {
   private model: string;
   private useGemini: boolean;
 
-  constructor(apiKey?: string, model: string = 'gemini-pro') {
+  constructor(apiKey?: string, model: string = 'gemini-2.5-flash') {
     // Prefer Gemini if available, fallback to OpenAI
     this.useGemini = !!GEMINI_API_KEY;
     this.apiKey = apiKey || (this.useGemini ? GEMINI_API_KEY : OPENAI_API_KEY);
