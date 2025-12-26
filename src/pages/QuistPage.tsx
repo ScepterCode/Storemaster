@@ -55,6 +55,13 @@ import type {
 import { QuistResponseRenderer } from '@/components/quist/QuistResponseRenderer';
 
 // ============================================================================
+// Constants
+// ============================================================================
+
+const STORAGE_KEY_PREFIX = 'quist_chat_';
+const MAX_STORED_MESSAGES = 50; // Limit stored messages to prevent localStorage overflow
+
+// ============================================================================
 // Loading Stage Messages
 // ============================================================================
 
@@ -122,18 +129,99 @@ const QUICK_QUERIES: QuickQuery[] = [
 ];
 
 // ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Get storage key for organization's chat history
+ */
+const getChatStorageKey = (organizationId: string): string => {
+  return `${STORAGE_KEY_PREFIX}${organizationId}`;
+};
+
+/**
+ * Load chat history from localStorage
+ */
+const loadChatHistory = (organizationId: string): ChatMessage[] => {
+  try {
+    const key = getChatStorageKey(organizationId);
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // Convert timestamp strings back to Date objects
+      return parsed.map((msg: any) => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp),
+      }));
+    }
+  } catch (error) {
+    console.error('Failed to load chat history:', error);
+  }
+  return [];
+};
+
+/**
+ * Save chat history to localStorage
+ */
+const saveChatHistory = (organizationId: string, messages: ChatMessage[]): void => {
+  try {
+    const key = getChatStorageKey(organizationId);
+    // Only store the most recent messages to prevent localStorage overflow
+    const messagesToStore = messages.slice(-MAX_STORED_MESSAGES);
+    localStorage.setItem(key, JSON.stringify(messagesToStore));
+  } catch (error) {
+    console.error('Failed to save chat history:', error);
+    // If localStorage is full, try to clear old data
+    if (error instanceof Error && error.name === 'QuotaExceededError') {
+      try {
+        const key = getChatStorageKey(organizationId);
+        // Keep only the last 20 messages
+        const messagesToStore = messages.slice(-20);
+        localStorage.setItem(key, JSON.stringify(messagesToStore));
+      } catch (retryError) {
+        console.error('Failed to save even after cleanup:', retryError);
+      }
+    }
+  }
+};
+
+/**
+ * Clear chat history from localStorage
+ */
+const clearChatHistory = (organizationId: string): void => {
+  try {
+    const key = getChatStorageKey(organizationId);
+    localStorage.removeItem(key);
+  } catch (error) {
+    console.error('Failed to clear chat history:', error);
+  }
+};
+
+// ============================================================================
 // Component
 // ============================================================================
 
 const QuistPage: React.FC = () => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: "👋 Hi! I'm Quist, your business intelligence assistant. Ask me anything about your sales, inventory, profits, or trends. Try one of the quick queries below or type your own question!",
-      timestamp: new Date(),
-    },
-  ]);
+  const { organization } = useOrganization();
+  const { user } = useAuth();
+  
+  // Initialize messages from localStorage or with welcome message
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    if (organization?.id) {
+      const stored = loadChatHistory(organization.id);
+      if (stored.length > 0) {
+        return stored;
+      }
+    }
+    return [
+      {
+        id: '1',
+        role: 'assistant',
+        content: "👋 Hi! I'm Quist, your business intelligence assistant. Ask me anything about your sales, inventory, profits, or trends. Try one of the quick queries below or type your own question!",
+        timestamp: new Date(),
+      },
+    ];
+  });
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingStage, setLoadingStage] = useState<QuistLoadingStage>('idle');
@@ -144,8 +232,22 @@ const QuistPage: React.FC = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const { organization } = useOrganization();
-  const { user } = useAuth();
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    if (organization?.id && messages.length > 0) {
+      saveChatHistory(organization.id, messages);
+    }
+  }, [messages, organization?.id]);
+
+  // Load chat history when organization changes
+  useEffect(() => {
+    if (organization?.id) {
+      const stored = loadChatHistory(organization.id);
+      if (stored.length > 0) {
+        setMessages(stored);
+      }
+    }
+  }, [organization?.id]);
 
   // Load recent queries when organization changes
   useEffect(() => {
@@ -343,6 +445,25 @@ const QuistPage: React.FC = () => {
     }
   };
 
+  const handleClearChat = () => {
+    if (organization?.id) {
+      clearChatHistory(organization.id);
+      setMessages([
+        {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: "👋 Chat cleared! I'm ready to help you with your business questions. What would you like to know?",
+          timestamp: new Date(),
+        },
+      ]);
+      setConversationContext(createConversationContext(organization.id, user?.id || ''));
+      toast({
+        title: 'Chat Cleared',
+        description: 'Your conversation history has been cleared.',
+      });
+    }
+  };
+
   return (
     <AppLayout>
       <FeatureGuard feature="quist">
@@ -361,13 +482,29 @@ const QuistPage: React.FC = () => {
           {/* Chat Container */}
           <Card className="flex-1 flex flex-col">
             <CardHeader className="border-b py-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Sparkles className="h-5 w-5 text-primary" />
-                Business Intelligence Chat
-              </CardTitle>
-              <CardDescription>
-                Powered by AI - Ask about sales, inventory, profits, and trends
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    Business Intelligence Chat
+                  </CardTitle>
+                  <CardDescription>
+                    Powered by AI - Ask about sales, inventory, profits, and trends
+                  </CardDescription>
+                </div>
+                {messages.length > 1 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearChat}
+                    className="text-muted-foreground hover:text-destructive"
+                    title="Clear chat history"
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Clear Chat
+                  </Button>
+                )}
+              </div>
             </CardHeader>
 
             <CardContent className="flex-1 flex flex-col p-0">
