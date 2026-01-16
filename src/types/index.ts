@@ -30,6 +30,8 @@ export interface Product extends SyncableEntity {
   batchTrackingEnabled?: boolean; // Whether this product uses batch tracking
   defaultShelfLifeDays?: number; // Default shelf life for new batches
   reorderPoint?: number; // Minimum stock level before reorder alert
+  vat_exempt?: boolean; // Whether product is VAT exempt
+  exemption_reason?: string; // Reason for VAT exemption
 }
 
 export interface ProductBatch extends SyncableEntity {
@@ -88,6 +90,8 @@ export interface Invoice extends SyncableEntity {
   totalAmount: number;
   status: 'draft' | 'issued' | 'paid' | 'overdue';
   dueDate?: string;
+  vat_amount?: number; // VAT amount for the invoice
+  is_tax_invoice?: boolean; // Whether this is a tax-compliant invoice
 }
 
 export interface InvoiceItem {
@@ -96,6 +100,8 @@ export interface InvoiceItem {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  vatAmount?: number; // VAT amount for this line item
+  isVATExempt?: boolean; // Whether this item is VAT exempt
 }
 
 export interface CartItem extends InvoiceItem {
@@ -121,3 +127,5 @@ export interface Category extends SyncableEntity {
   name: string;
   description?: string;
 }
+// Re-export tax types
+export * from './tax';

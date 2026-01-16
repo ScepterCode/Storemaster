@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Clock,
   LogOut,
+  Calculator,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -130,6 +131,14 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }: SidebarProps) => {
       active: isActive('/stock-predictions'),
       permission: 'reports_view',
       trialFeature: 'stock_predictions'
+    },
+    {
+      label: 'Tax Compliance',
+      icon: <Calculator className="h-4 w-4" />,
+      href: '/tax-compliance',
+      active: isActive('/tax-compliance'),
+      permission: 'reports_view',
+      trialFeature: 'tax_compliance'
     },
     {
       label: 'Quist',

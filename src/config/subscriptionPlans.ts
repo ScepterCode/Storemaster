@@ -19,6 +19,7 @@ export const FREE_TIER_TRIAL_FEATURES = [
   'stock_predictions',
   'advanced_reports', 
   'quist',
+  'tax_compliance',
 ] as const;
 
 export type TrialFeature = typeof FREE_TIER_TRIAL_FEATURES[number];

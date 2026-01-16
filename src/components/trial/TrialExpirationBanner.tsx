@@ -1,27 +1,25 @@
 /**
  * Trial Expiration Banner Component
  * 
- * Shows a dismissible banner when the user's trial is about to expire.
- * Appears at the top of the app when trial has 14 days or less remaining.
+ * Shows a persistent banner at the top of the app when the user's
+ * free trial is about to expire (within 14 days).
  */
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useOrganization } from '@/contexts/OrganizationContext';
+import { X, Clock, AlertTriangle, Rocket, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { X, Clock, AlertTriangle, Rocket, Gift, Sparkles } from 'lucide-react';
+import { useOrganization } from '@/contexts/OrganizationContext';
 import { 
-  isWithinFreeTierTrial, 
-  getTrialDaysRemaining,
-  getTrialEndDate,
-  FREE_TIER_TRIAL_FEATURES,
+  getTrialDaysRemaining, 
+  isWithinFreeTierTrial,
+  getTrialEndDate
 } from '@/config/subscriptionPlans';
 
-const BANNER_DISMISSED_KEY = 'trial_banner_dismissed';
-const BANNER_DISMISS_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+const DISMISSAL_KEY = 'trial_banner_dismissed_at';
+const DISMISSAL_DURATION = 24 * 60 * 60 * 1000;
 
 interface TrialExpirationBannerProps {
-  /** Show banner when days remaining is less than or equal to this */
   showWhenDaysRemaining?: number;
 }
 
@@ -30,121 +28,89 @@ const TrialExpirationBanner: React.FC<TrialExpirationBannerProps> = ({
 }) => {
   const navigate = useNavigate();
   const { organization } = useOrganization();
-  const [dismissed, setDismissed] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
 
-  // Check if banner was recently dismissed
   useEffect(() => {
-    setMounted(true);
-    const dismissedAt = localStorage.getItem(BANNER_DISMISSED_KEY);
+    const dismissedAt = localStorage.getItem(DISMISSAL_KEY);
     if (dismissedAt) {
       const dismissedTime = parseInt(dismissedAt, 10);
-      if (Date.now() - dismissedTime < BANNER_DISMISS_DURATION) {
-        setDismissed(true);
+      if (Date.now() - dismissedTime < DISMISSAL_DURATION) {
+        setIsDismissed(true);
       } else {
-        localStorage.removeItem(BANNER_DISMISSED_KEY);
+        localStorage.removeItem(DISMISSAL_KEY);
       }
     }
   }, []);
 
-  const handleDismiss = () => {
-    setDismissed(true);
-    localStorage.setItem(BANNER_DISMISSED_KEY, Date.now().toString());
-  };
-
-  // Don't render on server or if dismissed
-  if (!mounted || dismissed) return null;
-
-  // Only show for free tier organizations
+  if (isDismissed) return null;
   if (!organization || organization.subscription_tier !== 'free') return null;
 
-  // Check if within trial period
   const isInTrial = isWithinFreeTierTrial(organization.created_at);
   if (!isInTrial) return null;
 
   const daysRemaining = getTrialDaysRemaining(organization.created_at);
-  const trialEndDate = getTrialEndDate(organization.created_at);
-
-  // Only show when days remaining is within threshold
   if (daysRemaining > showWhenDaysRemaining) return null;
 
-  // Determine urgency level
-  const isCritical = daysRemaining <= 7;
-  const isWarning = daysRemaining <= 14 && daysRemaining > 7;
+  const trialEndDate = getTrialEndDate(organization.created_at);
 
-  // Feature names for display
-  const featureNames = ['Stock Predictions', 'Reports', 'Quist AI'];
+  const handleDismiss = () => {
+    localStorage.setItem(DISMISSAL_KEY, Date.now().toString());
+    setIsDismissed(true);
+  };
+
+  const getUrgencyConfig = () => {
+    if (daysRemaining <= 3) {
+      return {
+        bgClass: 'bg-gradient-to-r from-red-600 to-rose-600',
+        icon: <AlertTriangle className="h-5 w-5" />,
+        title: `Trial expires in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}!`,
+        message: `Upgrade now to keep Reports, Stock Predictions & Quist.`,
+        buttonText: 'Upgrade Now',
+        buttonClass: 'bg-white text-red-600 hover:bg-red-50',
+      };
+    }
+    if (daysRemaining <= 7) {
+      return {
+        bgClass: 'bg-gradient-to-r from-amber-500 to-orange-500',
+        icon: <Clock className="h-5 w-5" />,
+        title: `${daysRemaining} days left in your trial`,
+        message: `Upgrade before ${trialEndDate.toLocaleDateString()}.`,
+        buttonText: 'View Plans',
+        buttonClass: 'bg-white text-amber-600 hover:bg-amber-50',
+      };
+    }
+    return {
+      bgClass: 'bg-gradient-to-r from-blue-500 to-indigo-500',
+      icon: <Gift className="h-5 w-5" />,
+      title: `${daysRemaining} days remaining in your free trial`,
+      message: `Lock in your access with an upgrade.`,
+      buttonText: 'Explore Plans',
+      buttonClass: 'bg-white text-blue-600 hover:bg-blue-50',
+    };
+  };
+
+  const config = getUrgencyConfig();
 
   return (
-    <div
-      className={`
-        relative w-full py-3 px-4 
-        ${isCritical 
-          ? 'bg-gradient-to-r from-red-500 to-rose-500 text-white' 
-          : isWarning
-          ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white'
-          : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white'
-        }
-      `}
-    >
-      <div className="container mx-auto flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div className={`
-            p-1.5 rounded-full 
-            ${isCritical ? 'bg-white/20' : isWarning ? 'bg-white/20' : 'bg-white/20'}
-          `}>
-            {isCritical ? (
-              <AlertTriangle className="h-5 w-5" />
-            ) : isWarning ? (
-              <Clock className="h-5 w-5" />
-            ) : (
-              <Gift className="h-5 w-5" />
-            )}
+    <div className={`${config.bgClass} text-white px-4 py-3 relative`}>
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="flex-shrink-0 p-1.5 bg-white/20 rounded-full">
+            {config.icon}
           </div>
-          
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-            <span className="font-semibold">
-              {isCritical 
-                ? `⚠️ Trial ends in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}!`
-                : `🎁 ${daysRemaining} days left in your free trial`
-              }
-            </span>
-            <span className="text-sm opacity-90 hidden md:inline">
-              {isCritical 
-                ? `Upgrade by ${trialEndDate.toLocaleDateString()} to keep ${featureNames.join(', ')}`
-                : `Enjoying ${featureNames.join(', ')}? Upgrade to keep access after ${trialEndDate.toLocaleDateString()}`
-              }
-            </span>
+          <div className="min-w-0">
+            <p className="font-semibold text-sm">{config.title}</p>
+            <p className="text-xs text-white/90">{config.message}</p>
           </div>
         </div>
-
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => navigate('/subscription/plans')}
-            className={`
-              ${isCritical 
-                ? 'bg-white text-red-600 hover:bg-white/90' 
-                : isWarning
-                ? 'bg-white text-amber-600 hover:bg-white/90'
-                : 'bg-white text-emerald-600 hover:bg-white/90'
-              }
-            `}
-          >
+          <Button size="sm" className={config.buttonClass} onClick={() => navigate('/subscription/plans')}>
             <Rocket className="h-4 w-4 mr-1" />
-            {isCritical ? 'Upgrade Now' : 'View Plans'}
+            {config.buttonText}
           </Button>
-          
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={handleDismiss}
-            className="text-white hover:bg-white/20 p-1 h-8 w-8"
-            aria-label="Dismiss banner"
-          >
+          <button onClick={handleDismiss} className="p-1.5 hover:bg-white/20 rounded-full" aria-label="Dismiss">
             <X className="h-4 w-4" />
-          </Button>
+          </button>
         </div>
       </div>
     </div>

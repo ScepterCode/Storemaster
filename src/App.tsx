@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AuthProvider } from "./contexts/AuthContext";
+import { EnhancedAuthProvider } from "./contexts/EnhancedAuthContext";
 import { OrganizationProvider } from "./contexts/OrganizationContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
 import { SidebarProvider } from "./contexts/SidebarContext";
@@ -11,6 +11,7 @@ import { useTrialNotification } from "./hooks/useTrialNotification";
 import DashboardPage from "./pages/DashboardPage";
 import SettingsPage from "./pages/SettingsPage";
 import LoginPage from "./pages/LoginPage";
+import EmailVerificationPage from "./pages/EmailVerificationPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import LandingPage from "./pages/LandingPage";
@@ -20,6 +21,7 @@ import InventoryViewPage from "./pages/InventoryViewPage";
 import StockPage from "./pages/StockPage";
 import ReportsPage from "./pages/ReportsPage";
 import StockPredictionsPage from "./pages/StockPredictionsPage";
+import TaxCompliancePage from "./pages/TaxCompliancePage";
 import QuistPage from "./pages/QuistPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -121,7 +123,7 @@ function App() {
   }, []);
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+      <EnhancedAuthProvider>
         <OrganizationProvider>
           <SyncProvider>
             <NotificationProvider>
@@ -134,6 +136,7 @@ function App() {
                     {/* Public Routes - No Auth Required */}
                     <Route path="/" element={<LandingPage />} />
                     <Route path="/login" element={<LoginPage />} />
+                    <Route path="/verify-email" element={<EmailVerificationPage />} />
                     <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                     <Route path="/reset-password" element={<ResetPasswordPage />} />
                     <Route path="/join-team" element={<JoinTeamPage />} />
@@ -193,6 +196,14 @@ function App() {
                       element={
                         <ProtectedRoute>
                           <StockPredictionsPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/tax-compliance"
+                      element={
+                        <ProtectedRoute requiredPermission="reports_view">
+                          <TaxCompliancePage />
                         </ProtectedRoute>
                       }
                     />
@@ -336,7 +347,7 @@ function App() {
             </NotificationProvider>
           </SyncProvider>
         </OrganizationProvider>
-      </AuthProvider>
+      </EnhancedAuthProvider>
     </QueryClientProvider>
   );
 }
