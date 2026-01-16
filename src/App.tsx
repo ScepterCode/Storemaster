@@ -47,12 +47,30 @@ import AcceptInvitationPage from "./pages/AcceptInvitationPage";
 import JoinTeamPage from "./pages/JoinTeamPage";
 import { runMigrations } from "./lib/dataMigration";
 import { needsMultiTenantMigration, runMultiTenantMigration } from "./lib/multiTenantMigration";
+import { useOrganizationFix } from "./hooks/useOrganizationFix";
 
 const queryClient = new QueryClient();
 
-// Component to handle trial notifications (must be inside providers)
+// Component to handle trial notifications and organization setup
 const TrialNotificationHandler: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   useTrialNotification();
+  const { loading: orgLoading, error: orgError } = useOrganizationFix();
+  
+  if (orgLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p>Setting up your workspace...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (orgError) {
+    console.error('Organization setup error:', orgError);
+  }
+  
   return <>{children}</>;
 };
 
